@@ -1345,8 +1345,23 @@ for _i, _m in enumerate(get_months()):
     # join silver_agreement_status_history
     df_ash_base = current_ash(current=_m).filter(
         (F.col('active') == 1) &
-        (F.col('effective_date') >= F.col('current_month')) &
-        (F.col('effective_date') < F.col('next_month'))
+        (F.col('effective_date') < F.coalesce(F.col('ending_date'), F.lit('2099-12-31'))) &
+        (F.col('current_month_last_day').between(
+            F.col('effective_date'),
+            F.coalesce(F.col('ending_date'), F.lit('2099-12-31'))
+        ))
+    )
+
+    # partition by source_agreement_id, get agmt latest status
+    _window = Window.partitionBy('source_agreement_id').orderBy(
+        F.col('effective_date').desc(),
+        F.col('request_date').desc(),
+        F.col('updated_at').desc(),
+    )
+    df_ash_base = df_ash_base.withColumn(
+        'status_history_rn', F.row_number().over(_window)
+    ).filter(
+        F.col('status_history_rn') == 1
     )
 
     df_c_ash = df_contact_360_agreement.join(
@@ -1398,7 +1413,11 @@ for _i, _m in enumerate(get_months()):
     df_c_window = df_c_window.filter(
         (F.col('is_terminated') == 1) &
         (F.col('rn') == 1) &
-
+        (F.col('effective_date').between(
+            (F.date_add(F.add_months(F.last_day(F.col('current_month_last_day')), -1), 1)),
+            (F.last_day(F.col('current_month_last_day')))
+            )
+        ) &
         df_agreement_status_history.effective_date.isNotNull()
     )
 
@@ -1412,11 +1431,26 @@ for _i, _m in enumerate(get_months()):
 
     df_c_layer = K.GENERAL_LAYER_FILTER(df_c_layer, 'KPI_TLWD_TLWD_TLWD')
 
+    # SG use agmt ED/LWD as termination effective date
+    df_c_layer = df_c_layer.withColumn(
+        'real_effective_date',
+        F.when(
+            F.col('region') == 'SG',
+            F.greatest(
+                F.coalesce(F.col('end_date'), F.lit('2099-12-31')),
+                F.coalesce(F.col('last_workout_date'), F.lit('2000-01-01')),
+            )
+        ).otherwise(
+            F.col('effective_date')
+        )
+    )
+
     # group by
     df_c_ct = df_c_layer.groupBy(
         'region',
 
-        F.to_date(df_agreement_status_history.effective_date).alias('date'),
+        # F.to_date(df_agreement_status_history.effective_date).alias('date'),
+        F.to_date(F.col('real_effective_date')).alias('date'),
 
         # df_package.package_term_id,
         # df_package.package_sub_type_id,

@@ -5,6 +5,9 @@ Convert jupyter notebook into python file,
 separating each cell with a header and footer
     * header prefix: #====== [START] CELL {cell_number} ======
     * footer prefix: #====== [END] CELL {cell_number} ======
+
+If it is markdown cell then,
+    * markdown prefix: #====== [MARKDOWN] CELL {cell_number} ======
 """
 
 def extract_code_from_ipynb(ipynb_file, output_file):
@@ -19,7 +22,12 @@ def extract_code_from_ipynb(ipynb_file, output_file):
                 file.write(f'#====== [START] CELL {i} ======\n\n')
                 file.write(cell['source'])
                 file.write(f'\n\n#====== [END] CELL {i} ======\n\n\n')
+            if cell['cell_type'] == 'markdown':
+                file.write(f'\n\n#====== [MARKDOWN] CELL {i} ======\n\n')
 
 
 # Change the filename below to your corresponding input and output filename
-extract_code_from_ipynb('kpi.ipynb', 'output.py')
+dir = 'scripts'
+input_file = f'{dir}/kpi_mem.ipynb'
+output_file = f'{dir}/output.py'
+extract_code_from_ipynb(input_file, output_file)

@@ -11,6 +11,10 @@ importlib.reload(kpi_utils)
 
 import kpi_utils as K
 
+import helpers
+importlib.reload(helpers)
+import helpers as H
+
 #
 import random
 
@@ -164,6 +168,280 @@ def join_packages(df, _type=False, _sub=False, _term=False):
         )
 
     return df
+
+# vw_lead_account_modal (lead and NMU)
+df_vw_lead_account_modal = H.fetch_table(spark, 'silver_vw_lead_account_modal_2023')
+df_vw_lead_account_modal = df_vw_lead_account_modal.withColumn(
+    'creation_date', F.to_date(F.col('creation_date'))
+)
+
+# signed dim_location for vw_lead_account_modal
+df_signed_dim_location_360f = K.prefix(df_dim_location_360f, 'signed_dim_location')
+
+# vw_lead_account_modal join dim_location and signed dim_location
+df_fct_leads = df_vw_lead_account_modal.join(
+    df_dim_location_360f,
+    (df_dim_location_360f.dim_location_code == df_vw_lead_account_modal.final_location)
+    & (df_dim_location_360f.dim_location_code.isNotNull()),
+    'left'
+).join(
+    df_signed_dim_location_360f,
+    (df_signed_dim_location_360f.signed_dim_location_code == df_vw_lead_account_modal.signed_location)
+    & (df_signed_dim_location_360f.signed_dim_location_code.isNotNull()),
+    'left'
+).filter(
+    ~F.col('final_status').isin('Duplicate', 'Duplicate Lead', 'Existing Member', 'Blacklisted', 'Invalid', 'Unreachable')
+)
+
+# categorise for dashboard
+df_fct_leads = df_fct_leads.withColumn(
+    'final_lead_source', F.lower(df_fct_leads['final_lead_source']) # lowercase, for easier matching
+).withColumns({
+    'market_lead': H.MARKET_LEAD_WHEN(),
+    'lead_source_group': H.value_when(F.col('final_lead_source'), H.CONST_SOURCE_GROUP_MAPS, 'isin').otherwise(''),
+}).withColumn(
+    'group', K.ML_GROUP_WHEN()
+).filter(
+    ~(
+        (F.col('final_region') == 'SG') &
+        (F.col("dim_location_key").contains('HK')) # to handle 'OSG' location for HK
+    )
+)
+
+# NMU based on signed_location
+df_fct_nmu = df_fct_leads.filter(
+    (F.col('signed_location') != '0')
+    & (F.col('signed_location').isNotNull())
+)
+
+# leads based on final_location
+df_fct_leads = df_fct_leads.filter(
+    (F.col('final_location') != '0')
+    & (F.col('final_location').isNotNull())
+)
+
+# add layer column
+df_fct_leads = df_fct_leads.withColumn(
+    'layer', K.LEAD_LAYER_WHEN(),
+)
+
+# distinct lead (df_fct_leads -> df_fct_no_leads)
+df_fct_no_leads = df_fct_leads.groupBy(
+    df_fct_leads.creation_date,
+    df_fct_leads.final_region,
+    df_fct_leads.dim_location_key,
+    df_fct_leads.final_channel_code,
+    df_fct_leads.layer,
+    df_fct_leads.final_lead_source
+).agg(
+    F.countDistinct('id').alias('count')
+)
+
+# rename columns for dashboard
+col_rename_dict = {
+    'creation_date': 'date',
+    'final_region': 'region',
+    'final_channel_code': 'channel',
+    'final_lead_source': 'lead_source'
+}
+df_fct_no_leads = H.rename_cols(df_fct_no_leads, col_rename_dict)
+
+# rename layer
+df_fct_no_leads = df_fct_no_leads.withColumn('layer', K.NO_LAYER_RENAME('LD'))
+
+# add temp columns
+temp_cols = ['campaign', 'user_name', 'budget']
+df_fct_no_leads = H.add_empty_cols(
+    df_fct_no_leads, temp_cols
+).withColumns({
+    'month': F.month('date'),
+    'year': F.year('date')
+})['date', 'region', 'dim_location_key', 'campaign', 'channel', 'layer', 'lead_source', 'user_name', 'count', 'budget', 'month', 'year'] #rearrange columns
+
+# SG and HK only
+df_fct_no_leads = df_fct_no_leads.filter(
+    F.col('region').isin(['HK', 'SG'])
+)
+
+# write table,  rpt_kpi_leads
+K.write_table(df_fct_no_leads, table='rpt_kpi_leads')
+
+# NMU
+# add layer column
+df_fct_nmu = df_fct_nmu.withColumn(
+    'layer', K.LEAD_LAYER_WHEN(),
+)
+
+# distinct nmu/success
+df_fct_no_nmu = df_fct_nmu.groupBy(
+    df_fct_nmu.success_date,
+    df_fct_nmu.final_region,
+    df_fct_nmu.dim_location_key,
+    df_fct_nmu.final_channel_code,
+    df_fct_nmu.layer,
+    df_fct_nmu.final_lead_source
+).agg(
+    F.countDistinct('id').alias('count')
+)
+
+# rename columns for dashboard
+col_rename_dict = {
+    'success_date': 'date',
+    'final_region': 'region',
+    'final_channel_code': 'channel',
+    'final_lead_source': 'lead_source'
+}
+df_fct_no_nmu = H.rename_cols(df_fct_no_nmu, col_rename_dict)
+
+# rename layer
+df_fct_no_nmu = df_fct_no_nmu.withColumn('layer', K.NO_LAYER_RENAME('NMUCH'))
+
+# add month & year
+df_fct_no_nmu = df_fct_no_nmu.withColumns({
+    'month': F.month('date'),
+    'year': F.year('date')
+})['date', 'region', 'dim_location_key', 'layer', 'count', 'month', 'year'] #rearrange columns
+
+# SG and HK only
+df_fct_no_nmu = df_fct_no_nmu.filter(
+    F.col('region').isin(['HK', 'SG'])
+)
+
+# write table,  rpt_kpi_nmu_channel
+K.write_table(df_fct_no_nmu, table='rpt_kpi_nmu_channel')
+
+# vw_meeting
+df_vw_meeting = H.fetch_table(spark, 'silver_vw_meetings')
+# filter deleted & only 1st time
+df_vw_meeting = df_vw_meeting.withColumn(
+    'appointment_entered_date', F.to_date(
+        df_vw_meeting.date_entered + F.expr('INTERVAL 8 HOUR')
+    )  # +8 UTC
+)
+
+# renaming columns
+df_vw_meeting = H.rename_cols(df_vw_meeting, {'date_start_tz': 'appointment_date'})
+
+# join
+df_fct_booking = df_vw_meeting.join(
+    df_vw_lead_account_modal,
+    (df_vw_lead_account_modal.id == df_vw_meeting.parent_id),
+    'inner'
+).join(
+    df_dim_location_360f,
+    (df_dim_location_360f.dim_location_code == df_vw_meeting.location)
+    & (df_dim_location_360f.dim_location_code.isNotNull()),
+    'left'
+).withColumn(
+    'final_lead_source', F.lower(df_vw_lead_account_modal['final_lead_source'])
+)
+
+# categorise lead_source_group and market lead
+df_fct_booking = df_fct_booking.withColumns({
+    'market_lead': H.MARKET_LEAD_WHEN(),
+    'lead_source_group': H.value_when(F.col('final_lead_source'), H.CONST_SOURCE_GROUP_MAPS, 'isin').otherwise(''),
+}).withColumn(
+    'group', K.ML_GROUP_WHEN()
+).filter(
+    (df_fct_booking.deleted == 0)
+    & (df_fct_booking.name == '1st time')
+    & ~ (
+        (F.col('final_region') == 'SG') &
+        (F.col("dim_location_key").contains('HK')) # to handle 'OSG' location for HK
+    )
+)
+
+# add layer column
+df_fct_booking = df_fct_booking.withColumn(
+    'layer', K.LEAD_LAYER_WHEN()
+)
+
+# distinct appointment
+df_fct_no_booking = df_fct_booking.groupBy(
+    df_fct_booking.appointment_date,
+    df_fct_booking.final_region,
+    df_fct_booking.dim_location_key,
+    df_fct_booking.final_channel_code,
+    df_fct_booking.layer,
+    df_fct_booking.final_lead_source
+).agg(
+    F.countDistinct('silver_vw_meetings.id').alias('count')
+)
+
+# rename columns for dashboard
+col_rename_dict = {
+    'appointment_date': 'date',
+    'final_region': 'region',
+    'final_channel_code': 'channel',
+    'final_lead_source': 'lead_source'
+}
+df_fct_no_booking = H.rename_cols(df_fct_no_booking, col_rename_dict)
+
+# rename layer
+df_fct_no_booking = df_fct_no_booking.withColumn('layer', K.NO_LAYER_RENAME('BK'))
+
+# add temp columns
+temp_cols = ['campaign', 'user_name']
+df_fct_no_booking = H.add_empty_cols(
+    df_fct_no_booking, temp_cols
+).withColumns({
+    'month': F.month('date'),
+    'year': F.year('date')
+})['date', 'region', 'dim_location_key', 'campaign', 'channel', 'lead_source', 'layer', 'user_name', 'count', 'month', 'year'] #rearrange columns
+
+#only SG and HK
+f_fct_no_booking = df_fct_no_booking.filter(
+    F.col('region').isin(['HK', 'SG'])
+)
+
+# write table, rpt_kpi_booking
+K.write_table(f_fct_no_booking, table='rpt_kpi_booking')
+
+# booking/appointment show
+df_fct_show = df_fct_booking.filter(
+    (F.col('status') == 'Held')
+)
+
+# distinct appointment
+df_fct_no_show = df_fct_show.groupBy(
+    df_fct_show.appointment_date,
+    df_fct_show.final_region,
+    df_fct_show.dim_location_key,
+    df_fct_show.final_channel_code,
+    df_fct_show.layer,
+    df_fct_show.final_lead_source
+).agg(
+    F.countDistinct('silver_vw_meetings.id').alias('count')
+)
+
+# rename columns for dashboard
+rename = {
+    'appointment_date': 'date',
+    'final_region': 'region',
+    'final_channel_code': 'channel',
+    'final_lead_source': 'lead_source'
+}
+df_fct_no_show = H.rename_cols(df_fct_no_show, rename)
+
+# rename layer
+df_fct_no_show = df_fct_no_show.withColumn('layer', K.NO_LAYER_RENAME('SW'))
+
+# add temp columns
+temp_cols = ['campaign', 'user_name']
+df_fct_no_show = H.add_empty_cols(
+    df_fct_no_show, temp_cols
+).withColumns({
+    'month': F.month('date'),
+    'year': F.year('date')
+})['date', 'region', 'dim_location_key', 'campaign', 'channel', 'layer', 'lead_source', 'user_name', 'count', 'month', 'year'] #rearrange columns
+
+# SG and HK only
+df_fct_no_show = df_fct_no_show.filter(
+    F.col('region').isin(['HK', 'SG'])
+)
+
+# write table, rpt_kpi_show
+K.write_table(df_fct_no_show, table='rpt_kpi_show')
 
 #====== [END] CELL 8 ======
 
@@ -921,7 +1199,7 @@ df_leads_rpt = df_leads_rpt.filter(
     F.col('region').isin(['HK', 'SG'])
 )
 
-K.write_table(df_leads_rpt, table='rpt_kpi_leads')
+# K.write_table(df_leads_rpt, table='rpt_kpi_leads')
 
 #====== [END] CELL 41 ======
 
@@ -997,7 +1275,7 @@ df_leads_nmu_rpt = df_leads_nmu_rpt.filter(
     F.col('region').isin(['HK', 'SG'])
 )
 
-K.write_table(df_leads_nmu_rpt, table='rpt_kpi_nmu_channel')
+# K.write_table(df_leads_nmu_rpt, table='rpt_kpi_nmu_channel')
 
 #====== [END] CELL 45 ======
 
@@ -1133,7 +1411,7 @@ df_meeting_booking = df_meeting_booking.filter(
     F.col('region').isin(['HK', 'SG'])
 )
 
-K.write_table(df_meeting_booking, table='rpt_kpi_booking')
+# K.write_table(df_meeting_booking, table='rpt_kpi_booking')
 
 #====== [END] CELL 51 ======
 
@@ -1172,7 +1450,7 @@ df_meeting_show = df_meeting_show.filter(
     F.col('region').isin(['HK', 'SG'])
 )
 
-K.write_table(df_meeting_show, table='rpt_kpi_show')
+# K.write_table(df_meeting_show, table='rpt_kpi_show')
 
 #====== [END] CELL 53 ======
 

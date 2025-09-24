@@ -1869,6 +1869,34 @@ for _i, _m in enumerate(get_months(1)):
 
 #====== [MARKDOWN] CELL 67 ======
 #====== [START] CELL 68 ======
+df_lead_account = spark.read.table(K.TABLE('silver_vw_lead_account_modal_2023'))
+
+# fct_sf_accounts
+df_lead_account = df_lead_account.withColumns({
+    'region': K.SH_CN_WHEN_ALT(),
+    'location': K.ACCOUNT_LOCATION_WHEN(),
+    'date': F.to_date('success_date'),
+}).withColumn(
+    'region_account_id', K.concat_id(df_lead_account, cols=['final_region', 'account_id'])
+)
+
+# success account
+## filter
+df_lead_account_success = df_lead_account.filter(
+    F.col('success_date').isNotNull() & 
+    (F.col('guest_status') == 'Success')
+)
+
+## window
+### get first account 
+_window = Window.partitionBy('account_id').orderBy('success_date')
+df_lead_account_success = df_lead_account_success.withColumn(
+    '_row', F.row_number().over(_window)
+)\
+    .filter(F.col('_row')==1)\
+    .select(
+        'region_account_id', F.date_format('success_date', K.MONTH_DATE_FORMAT).alias('success_month')
+    )
 
 NMU_ENDING_BALANCE_GROUP = [
     'date',
@@ -1895,30 +1923,23 @@ def nmu_eb_group_count(df, whens):
     return df
 
 for _i, _m in enumerate(get_months()):
-    # always use current month
-    df_nmu_eb = current_cmalash(current=get_months(1)[0])
-    # df_nmu_eb = current_cmalash(current=_m)
+    df_nmu_endbal = spark.read.table(K.TABLE('fct_fpa_nmu_ending_balance'))
+    df_nmu_endbal = df_nmu_endbal.withColumn('source_ext_ref_contact_id', K.concat_id(df_nmu_endbal, cols=['source', 'ext_ref_contact_id']))
+    df_nmu_endbal = df_nmu_endbal.withColumn('max_ending_date', F.ifnull('status_ending_date', F.lit('2099-12-31')))
 
-    df_nmu_eb = df_nmu_eb.filter(
-        # (df_nmu_eb.adjusted_date_row == 1) &
-        (
-            ~df_agreement_status_history.agreement_status_id.isin([2, 3, 4, 7]) |
-            df_agreement_status_history.remark.like('Suspend - Frozen%') |
-            (
-                df_agreement_status_history.agreement_status_id.isNull() &
-                (F.ifnull(df_360_agreement.prev_gap_reference, F.lit('2099-12-31')) >= df_nmu_eb.current_month_last_day) & # <---
-                (F.least(df_360_agreement.start_date, df_360_agreement.signed_date) < df_nmu_eb.current_month_last_day) # <---
-            )
-        )
+    # Join df_lead_account_success to df_nmu_eb
+    df_nmu_eb = df_nmu_endbal.join(
+        df_lead_account_success.select('region_account_id', 'success_month'),
+        df_nmu_endbal.source_ext_ref_contact_id == df_lead_account_success.region_account_id,
+        'left'
     )
+
+
     # create is_success_month
     df_nmu_eb = df_nmu_eb.withColumn(
-        'is_success_month',
-        df_account_success.success_month.isNotNull() &
-        # df_360_agreement.signed_month.isNotNull() &
-
-        #(df_account_success.success_month == df_360_agreement.signed_month)
-        (df_account_success.success_month == F.date_format(_m, K.MONTH_DATE_FORMAT))
+        'is_success_month', 
+        df_lead_account_success.success_month.isNotNull() &
+        (df_lead_account_success.success_month == F.date_format(_m, K.MONTH_DATE_FORMAT))
     )
 
     # append
@@ -1927,31 +1948,28 @@ for _i, _m in enumerate(get_months()):
         df = set_current(df, _m)
 
         # filter
-        filter_col = F.col('current_date') if is_current else F.col('current_month_last_day')
+        filter_col = F.col('current_date') if is_current else F.col('current_month_last_day') 
         df = df.filter(
-            df_360_agreement.signed_date <= filter_col
+            df_nmu_eb.signed_date <= filter_col
         )
+        
 
         # select
         df = df.select(
-            df_contact.id.alias('contact_id'),
+            df.contact_id,
 
             # for groupby
-            df_360_package.package_term_id,
-            df_360_package.package_sub_type_id,
-            df_360_package.min_committed_month,
+            df.package_term_id,
+            df.package_sub_type_id,
+            df.min_committed_month,
 
-            df_location_full.dim_location_key,
+            df.dim_location_key,
 
-            # F.to_date(df_360_agreement.signed_date).alias('date'),
             F.to_date('current_month').alias('date'),
 
-            df_contact.source.alias('region'),
+            df.source.alias('region'),
 
             'is_success_month',
-
-            # new
-            df_nmu_eb.adjusted_date_row,
         )
 
         # create flag

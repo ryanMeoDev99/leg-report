@@ -606,13 +606,13 @@ def ENDING_BALANCE_MEMBER_WHEN(
     stid=F.col('package_sub_type_id'), tid=F.col('package_term_id'), mcm=F.col('min_committed_month'), reg=F.col('region')
 ):
     region_when = (
-        (stid.isin(8, 9) & (reg == 'HK')) |
-        (stid.isin(1, 2) & (reg == 'SG')) |
+        (stid.isin(9) & (reg == 'HK')) | 
+        (stid.isin(2) & (reg == 'SG')) | 
         (reg == 'CN')
     )
 
-    autopay_when = lambda _: region_when & (tid == 1) & (mcm == _)
-    prepaid_when = lambda _: region_when & (tid == 2) & (mcm == _)
+    autopay_when = lambda _: region_when & (tid == 1) & (mcm == _) 
+    prepaid_when = lambda _: region_when & (tid == 2) & (mcm == _) 
 
     _map = {
         # autopay
@@ -634,34 +634,34 @@ def ENDING_BALANCE_MEMBER_SHORT_WHEN (
     stid=F.col('package_sub_type_id'), mcm=F.col('min_committed_month'), reg=F.col('region')
 ):
     region_when = (
-        (stid.isin([8]) & (reg == 'HK')) |
-        (stid.isin([1]) & reg.isin(['SG', 'CN']))
+        (stid.isin([8]) & (reg == 'HK')) | 
+        (stid.isin([1]) & reg.isin(['SG','CN']))
     )
 
     return F.when(
-        region_when & mcm.between(1, 5),
+        region_when & mcm.between(1, 12),
         'short_term'
     )
 
 def ENDING_BALANCE_MEMBER_OTHER(
-    df, group,
-    tid=F.col('package_term_id'), stid=F.col('package_sub_type_id'),
+    df, group, 
+    tid=F.col('package_term_id'), stid=F.col('package_sub_type_id'), 
     mcm=F.col('min_committed_month'), cid=F.col('contact_id'), reg=F.col('region')
 ):
     region_cond1_when = (
-        (stid.isin([8]) & (reg == 'HK')) |
+        (stid.isin([8]) & (reg == 'HK')) | 
         (stid.isin([1]) & reg.isin(['SG', 'CN']))
     )
 
     region_cond2_when = (
-        (stid.isin([8, 9]) & (reg == 'HK')) |
-        (stid.isin([1, 2]) & (reg == 'SG')) |
-        (reg == 'CN')
+        (stid.isin([9]) & (reg == 'HK')) | 
+        (stid.isin([2]) & (reg == 'SG')) | 
+        (reg == 'CN') 
     )
 
     df = df.withColumns({
         '_cond1': F.when(
-            region_cond1_when & ~mcm.between(1, 5),
+            region_cond1_when & ~mcm.between(1, 12),
             cid
         ),
         '_cond2': F.when(
@@ -671,11 +671,11 @@ def ENDING_BALANCE_MEMBER_OTHER(
             (tid == 1) & region_cond2_when & ~mcm.isin([3, 6, 12]),
             cid
         ),
-        #
+        # 
         'layer': F.lit('KPI_MEB_MEB_MEB'),
     })
 
-    #
+    # 
     df = df.groupBy(
         *group
     ).agg(
@@ -684,7 +684,7 @@ def ENDING_BALANCE_MEMBER_OTHER(
     )
 
     df = df.withColumn(
-        'count',
+        'count', 
         F.col('_cond1') + F.col('_cond2')
     ).drop(
         '_cond1', '_cond2',

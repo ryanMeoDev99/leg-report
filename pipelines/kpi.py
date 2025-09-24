@@ -1824,162 +1824,24 @@ for _i, _m in enumerate(get_months()):
 
 #====== [MARKDOWN] CELL 63 ======
 #====== [START] CELL 64 ======
+df_renew_upgrade = spark.read.table(K.TABLE('fct_fpa_renew_upgrade'))
 
-df_agreement = spark.read.table(K.TABLE('silver_agreement'))
-
-# create join key
-df_agreement = df_agreement.withColumns({
-    'package_bk': K.concat_id(df_agreement, cols=['source', 'package_id']),
-    'contact_bk': K.concat_id(df_agreement, cols=['source', 'contact_id']),
-    'location_bk': K.concat_id(df_agreement, cols=['source', 'revenue_location_id']),
-    'agreement_bk': K.concat_id(df_agreement, cols=['source', 'from_agreement_id']),
-})
-
-# join package
-df_agreement_package = df_agreement.join(
-    df_package,
-    'package_bk',
-    'left'
+df_renew_upgrade = df_renew_upgrade.withColumn(
+    'date', F.to_date('signed_date')
 )
 
-# join package type
-df_agreement_package_type = df_agreement_package.join(
-    df_package_type,
-    'package_type_bk',
-    'left'
+df_renew_upgrade = df_renew_upgrade.withColumn(
+    'region', F.left('dim_location_key', F.lit(2))
 )
 
-# join package term
-df_agreement_package_term = df_agreement_package_type.join(
-    df_package_term,
-    'package_term_bk',
-    'left'
+df_renew_upgrade = df_renew_upgrade.withColumnRenamed(
+    'renewal_upgrade','layer'
 )
 
-# join contact
-df_agreement_contact = df_agreement_package_term.join(
-    df_contact,
-    df_agreement.contact_bk ==  df_contact.bk,
-    'left'
-)
-
-# join invoice_detail
-df_agreement_invoice = df_agreement_contact.join(
-    df_invoice_detail,
-    df_agreement.bk ==  df_invoice_detail.invoice_source_item_id,
-    'left'
-)
-
-###
-
-# join silver_package_sub_type
-df_agreement_package_sub_type = df_agreement_invoice.join(
-    df_package_sub_type,
-    'package_sub_type_bk',
-    'left'
-)
-
-# join silver_package_book_limit_line
-df_agreement_book_limit = df_agreement_package_sub_type.join(
-    df_book_limit,
-    df_agreement.package_bk ==  df_book_limit.book_limit_bk,
-    'left'
-)
-
-# join silver_location + 360f
-df_agreement_location = df_agreement_book_limit.join(
-    df_location_full,
-    'location_bk',
-    'left'
-)
-
-# self join last agreement
-df_agreement_last = df_agreement_location.select(
-    df_agreement.bk,
-    df_agreement.id,
-    df_agreement.agreement_no,
-    df_package_term.package_term_name,
-    df_package.package_name,
-    df_invoice_detail.invoice_category_id
-)
-
-df_agreement_last = K.prefix(df_agreement_last, 'last')
-
-df_agreement_join = df_agreement_location.join(
-    df_agreement_last,
-    df_agreement.agreement_bk == df_agreement_last.last_bk,
-    'left'
-)
-
-# filter
-df_agreement_join = df_agreement_join.filter(
-    df_package.package_type_id == 1
-)
-
-# window
-contact_window = Window.partitionBy(df_agreement.contact_id).orderBy(
-    'signed_date', F.to_date('end_date'), df_agreement.agreement_no
-)
-
-lag_map = {
-    'last_id': df_agreement.id,
-    'last_agreement_no': df_agreement.agreement_no,
-    'last_package_term_name': df_package_term.package_term_name,
-    'last_package_name': df_package.package_name,
-    'last_invoice_category_id': df_invoice_detail.invoice_category_id,
-}
-
-for _c, _k in lag_map.items():
-    df_agreement_join = df_agreement_join.withColumn(
-        _c,
-        F.coalesce(
-            _c,
-            F.lag(_k).over(contact_window)
-        )
-    )
-
-# select
-df_agreement_select = df_agreement_join.select(
-    df_agreement.contact_id,
-    df_agreement.signed_date,
-    df_agreement.from_agreement_id,
-
-    F.substring(df_location_full.dim_location_key, 0, 2).alias('region'),
-    df_location_full.dim_location_key,
-    df_location_full.location_code,
-
-    df_package.package_name,
-    df_package.package_sub_type_id,
-
-    df_package_sub_type.package_sub_type_code,
-
-    df_package_term.package_term_name,
-
-    'last_package_term_name',
-)
-
-
-# create renew_upgrade
-df_agreement_select = df_agreement_select.withColumn(
-    'layer',
-    K.RENEWAL_UPGRADE_WHEN()
-)
-
-# group by distinct count
-df_agreement_ct = df_agreement_select.groupBy(
-    F.to_date('signed_date').alias('date'),
-    'dim_location_key',
-    'region',
-    'location_code',
-    'layer',
-    'package_sub_type_id',
-    'package_sub_type_code'
-).agg(
-    F.count_distinct('contact_id').alias('count')
-)
+df_renew_upgrade = df_renew_upgrade.drop('signed_date')
 
 # general filter + last group
-df_agreement_ct = K.GENERAL_LAYER_FILTER(df_agreement_ct, 'KPI_REU_REU_REU')
+df_agreement_ct = K.GENERAL_LAYER_FILTER(df_renew_upgrade, 'KPI_REU_REU_REU')
 
 df_agreement_ct = df_agreement_ct.groupBy(
     'date',

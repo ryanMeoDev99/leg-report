@@ -169,7 +169,7 @@ def join_packages(df, _type=False, _sub=False, _term=False):
 
     return df
 
-# vw_lead_account_modal (lead and NMU)
+# vw_lead_account_modal
 df_vw_lead_account_modal = H.fetch_table(spark, 'silver_vw_lead_account_modal_2023')
 df_vw_lead_account_modal = df_vw_lead_account_modal.withColumn(
     'creation_date', F.to_date(F.col('creation_date'))
@@ -177,6 +177,47 @@ df_vw_lead_account_modal = df_vw_lead_account_modal.withColumn(
 
 # signed dim_location for vw_lead_account_modal
 df_signed_dim_location_360f = K.prefix(df_dim_location_360f, 'signed_dim_location')
+
+# suitecrm campaign
+df_crm_campaign = H.fetch_table(spark, 'silver_campaign')
+df_crm_campaign = df_crm_campaign.withColumn(
+    'source_id', K.concat_id(df_crm_campaign, cols=['source', 'id'])
+)
+df_crm_campaign = K.prefix(df_crm_campaign, 'campaign')
+
+# suitecrm channel
+df_crm_channel = H.fetch_table(spark, 'silver_channel_code')
+df_crm_channel = df_crm_channel.withColumn(
+    'source_id', K.concat_id(df_crm_channel, cols=['source', 'id'])
+)
+df_crm_channel = K.prefix(df_crm_channel, 'channel')
+
+# suitecrm budget
+df_crm_budget = H.fetch_table(spark, 'silver_uat_marketing_budget')
+
+# join budget to campaign, channel
+df_crm_budget = df_crm_budget.join(
+    df_crm_campaign,
+    (df_crm_budget.campaign_id == df_crm_campaign.campaign_id) & (df_crm_budget.source == df_crm_campaign.campaign_source),
+    'left'
+).join(
+    df_crm_channel,
+    (df_crm_budget.channel_code_id == df_crm_channel.channel_id) & (df_crm_budget.source == df_crm_channel.channel_source),
+    'left'
+).select(
+    df_crm_campaign.campaign_code.alias('budget_campaign_code'),
+    df_crm_channel.channel_code.alias('budget_channel_code'),
+
+    df_crm_budget.source.alias('budget_source'),
+    df_crm_budget.budget_amount
+)
+
+# suitecrm lead to get lead's campaign for campaign budget
+df_crm_lead = H.fetch_table(spark, 'silver_leads').select(
+    F.col('id').alias('lead_id'),
+    F.col('marketing_campaign').alias('lead_marketing_campaign_code')
+)
+
 
 # vw_lead_account_modal join dim_location and signed dim_location
 df_fct_leads = df_vw_lead_account_modal.join(
@@ -189,9 +230,34 @@ df_fct_leads = df_vw_lead_account_modal.join(
     (df_signed_dim_location_360f.signed_dim_location_code == df_vw_lead_account_modal.signed_location)
     & (df_signed_dim_location_360f.signed_dim_location_code.isNotNull()),
     'left'
+).join(
+    df_users,
+    df_vw_lead_account_modal.assigned_user_id == df_users.user_id,
+    'left'
+).join(
+    df_crm_lead,
+    df_vw_lead_account_modal.id == df_crm_lead.lead_id,
+    'left'
+).join(
+    df_crm_budget,
+    (df_crm_lead.lead_marketing_campaign_code == df_crm_budget.budget_campaign_code) &
+    (df_vw_lead_account_modal.final_channel_code == df_crm_budget.budget_channel_code) &
+    (df_vw_lead_account_modal.final_region == df_crm_budget.budget_source),
+    'left'
 ).filter(
     ~F.col('final_status').isin('Duplicate', 'Duplicate Lead', 'Existing Member', 'Blacklisted', 'Invalid', 'Unreachable')
 )
+
+# create per budget by window
+_window = Window.partitionBy('final_marketing_campaign', 'final_channel_code', 'final_region', 'budget_amount')
+df_fct_leads = df_fct_leads.withColumn(
+    'no_leads_by_campaign', F.count('*').over(_window)
+)
+
+df_fct_leads = df_fct_leads.withColumn(
+    'per_budget_amount', F.col('budget_amount') / F.col('no_leads_by_campaign')
+)
+
 
 # categorise for dashboard
 df_fct_leads = df_fct_leads.withColumn(
@@ -232,9 +298,12 @@ df_fct_no_leads = df_fct_leads.groupBy(
     df_fct_leads.dim_location_key,
     df_fct_leads.final_channel_code,
     df_fct_leads.layer,
-    df_fct_leads.final_lead_source
+    df_fct_leads.final_lead_source,
+    df_users.user_name,
+    df_crm_lead.lead_marketing_campaign_code
 ).agg(
-    F.countDistinct('id').alias('count')
+    F.countDistinct('id').alias('count'),
+    F.sum('per_budget_amount').alias('budget')
 )
 
 # rename columns for dashboard
@@ -242,21 +311,16 @@ col_rename_dict = {
     'creation_date': 'date',
     'final_region': 'region',
     'final_channel_code': 'channel',
-    'final_lead_source': 'lead_source'
+    'final_lead_source': 'lead_source',
+    'lead_marketing_campaign_code': 'campaign'
 }
 df_fct_no_leads = H.rename_cols(df_fct_no_leads, col_rename_dict)
 
 # rename layer
-df_fct_no_leads = df_fct_no_leads.withColumn('layer', K.NO_LAYER_RENAME('LD'))
-
-# add temp columns
-temp_cols = ['campaign', 'user_name', 'budget']
-df_fct_no_leads = H.add_empty_cols(
-    df_fct_no_leads, temp_cols
-).withColumns({
-    'month': F.month('date'),
+df_fct_no_leads = df_fct_no_leads.withColumn('layer', K.NO_LAYER_RENAME('LD')).withColumns({
+    'month': (F.year('date') * 100 + F.month('date')),
     'year': F.year('date')
-})['date', 'region', 'dim_location_key', 'campaign', 'channel', 'layer', 'lead_source', 'user_name', 'count', 'budget', 'month', 'year'] #rearrange columns
+})
 
 # SG and HK only
 df_fct_no_leads = df_fct_no_leads.filter(
@@ -266,7 +330,7 @@ df_fct_no_leads = df_fct_no_leads.filter(
 # write table,  rpt_kpi_leads
 K.write_table(df_fct_no_leads, table='rpt_kpi_leads')
 
-# NMU
+#### NMU
 # add layer column
 df_fct_nmu = df_fct_nmu.withColumn(
     'layer', K.LEAD_LAYER_WHEN(),
@@ -298,7 +362,7 @@ df_fct_no_nmu = df_fct_no_nmu.withColumn('layer', K.NO_LAYER_RENAME('NMUCH'))
 
 # add month & year
 df_fct_no_nmu = df_fct_no_nmu.withColumns({
-    'month': F.month('date'),
+    'month': (F.year('date') * 100 + F.month('date')),
     'year': F.year('date')
 })['date', 'region', 'dim_location_key', 'layer', 'count', 'month', 'year'] #rearrange columns
 
@@ -307,9 +371,10 @@ df_fct_no_nmu = df_fct_no_nmu.filter(
     F.col('region').isin(['HK', 'SG'])
 )
 
-# write table,  rpt_kpi_nmu_channel
+# Write to table
 K.write_table(df_fct_no_nmu, table='rpt_kpi_nmu_channel')
 
+### booking & show
 # vw_meeting
 df_vw_meeting = H.fetch_table(spark, 'silver_vw_meetings')
 # filter deleted & only 1st time
@@ -331,6 +396,14 @@ df_fct_booking = df_vw_meeting.join(
     df_dim_location_360f,
     (df_dim_location_360f.dim_location_code == df_vw_meeting.location)
     & (df_dim_location_360f.dim_location_code.isNotNull()),
+    'left'
+).join(
+    df_users,
+    df_vw_lead_account_modal.assigned_user_id == df_users.user_id,
+    'left'
+).join(
+    df_crm_lead,
+    df_vw_lead_account_modal.id == df_crm_lead.lead_id,
     'left'
 ).withColumn(
     'final_lead_source', F.lower(df_vw_lead_account_modal['final_lead_source'])
@@ -361,9 +434,11 @@ df_fct_no_booking = df_fct_booking.groupBy(
     df_fct_booking.appointment_date,
     df_fct_booking.final_region,
     df_fct_booking.dim_location_key,
+    df_crm_lead.lead_marketing_campaign_code,
     df_fct_booking.final_channel_code,
+    df_fct_booking.final_lead_source,
     df_fct_booking.layer,
-    df_fct_booking.final_lead_source
+    df_users.user_name
 ).agg(
     F.countDistinct('silver_vw_meetings.id').alias('count')
 )
@@ -373,21 +448,19 @@ col_rename_dict = {
     'appointment_date': 'date',
     'final_region': 'region',
     'final_channel_code': 'channel',
-    'final_lead_source': 'lead_source'
+    'final_lead_source': 'lead_source',
+    'lead_marketing_campaign_code': 'campaign'
 }
 df_fct_no_booking = H.rename_cols(df_fct_no_booking, col_rename_dict)
 
 # rename layer
 df_fct_no_booking = df_fct_no_booking.withColumn('layer', K.NO_LAYER_RENAME('BK'))
 
-# add temp columns
-temp_cols = ['campaign', 'user_name']
-df_fct_no_booking = H.add_empty_cols(
-    df_fct_no_booking, temp_cols
-).withColumns({
-    'month': F.month('date'),
+#
+df_fct_no_booking = df_fct_no_booking.withColumns({
+    'month': (F.year('date') * 100 + F.month('date')),
     'year': F.year('date')
-})['date', 'region', 'dim_location_key', 'campaign', 'channel', 'lead_source', 'layer', 'user_name', 'count', 'month', 'year'] #rearrange columns
+}) #rearrange columns
 
 #only SG and HK
 f_fct_no_booking = df_fct_no_booking.filter(
@@ -396,6 +469,7 @@ f_fct_no_booking = df_fct_no_booking.filter(
 
 # write table, rpt_kpi_booking
 K.write_table(f_fct_no_booking, table='rpt_kpi_booking')
+
 
 # booking/appointment show
 df_fct_show = df_fct_booking.filter(
@@ -407,40 +481,41 @@ df_fct_no_show = df_fct_show.groupBy(
     df_fct_show.appointment_date,
     df_fct_show.final_region,
     df_fct_show.dim_location_key,
+    df_crm_lead.lead_marketing_campaign_code,
     df_fct_show.final_channel_code,
+    df_fct_show.final_lead_source,
     df_fct_show.layer,
-    df_fct_show.final_lead_source
+    df_users.user_name
 ).agg(
     F.countDistinct('silver_vw_meetings.id').alias('count')
 )
 
 # rename columns for dashboard
-rename = {
+col_rename_dict = {
     'appointment_date': 'date',
     'final_region': 'region',
     'final_channel_code': 'channel',
-    'final_lead_source': 'lead_source'
+    'final_lead_source': 'lead_source',
+    'lead_marketing_campaign_code': 'campaign'
 }
-df_fct_no_show = H.rename_cols(df_fct_no_show, rename)
+df_fct_no_show = H.rename_cols(df_fct_no_show, col_rename_dict)
 
 # rename layer
 df_fct_no_show = df_fct_no_show.withColumn('layer', K.NO_LAYER_RENAME('SW'))
 
 # add temp columns
-temp_cols = ['campaign', 'user_name']
-df_fct_no_show = H.add_empty_cols(
-    df_fct_no_show, temp_cols
-).withColumns({
-    'month': F.month('date'),
+df_fct_no_show = df_fct_no_show.withColumns({
+    'month': (F.year('date') * 100 + F.month('date')),
     'year': F.year('date')
-})['date', 'region', 'dim_location_key', 'campaign', 'channel', 'layer', 'lead_source', 'user_name', 'count', 'month', 'year'] #rearrange columns
+})
 
-# SG and HK only
+# Get from HK and SG only
 df_fct_no_show = df_fct_no_show.filter(
     F.col('region').isin(['HK', 'SG'])
 )
 
 # write table, rpt_kpi_show
+K.write_table(df_fct_no_show, table='rpt_kpi_guest') # guest and show has the same definition in SuiteCRM
 K.write_table(df_fct_no_show, table='rpt_kpi_show')
 
 #====== [END] CELL 8 ======
@@ -1490,7 +1565,7 @@ df_meeting_guest = df_meeting_guest.filter(
     F.col('region').isin(['HK', 'SG'])
 )
 
-K.write_table(df_meeting_guest, table='rpt_kpi_guest')
+# K.write_table(df_meeting_guest, table='rpt_kpi_guest')
 
 #====== [END] CELL 55 ======
 

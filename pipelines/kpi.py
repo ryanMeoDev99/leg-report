@@ -175,6 +175,12 @@ df_vw_lead_account_modal = df_vw_lead_account_modal.withColumn(
     'creation_date', F.to_date(F.col('creation_date'))
 )
 
+# silver_users
+df_users = H.fetch_table(spark, 'silver_users').select(
+    F.col('id').alias('user_id'),
+    'user_name',
+)
+
 # signed dim_location for vw_lead_account_modal
 df_signed_dim_location_360f = K.prefix(df_dim_location_360f, 'signed_dim_location')
 
@@ -318,6 +324,7 @@ df_fct_no_leads = H.rename_cols(df_fct_no_leads, col_rename_dict)
 
 # rename layer
 df_fct_no_leads = df_fct_no_leads.withColumn('layer', K.NO_LAYER_RENAME('LD')).withColumns({
+    'date': F.to_date(F.col('date')),
     'month': (F.year('date') * 100 + F.month('date')),
     'year': F.year('date')
 })
@@ -362,6 +369,7 @@ df_fct_no_nmu = df_fct_no_nmu.withColumn('layer', K.NO_LAYER_RENAME('NMUCH'))
 
 # add month & year
 df_fct_no_nmu = df_fct_no_nmu.withColumns({
+    'date': F.to_date(F.col('date')),
     'month': (F.year('date') * 100 + F.month('date')),
     'year': F.year('date')
 })['date', 'region', 'dim_location_key', 'layer', 'count', 'month', 'year'] #rearrange columns
@@ -458,6 +466,7 @@ df_fct_no_booking = df_fct_no_booking.withColumn('layer', K.NO_LAYER_RENAME('BK'
 
 #
 df_fct_no_booking = df_fct_no_booking.withColumns({
+    'date': F.to_date(F.col('date')),
     'month': (F.year('date') * 100 + F.month('date')),
     'year': F.year('date')
 }) #rearrange columns
@@ -475,6 +484,50 @@ K.write_table(f_fct_no_booking, table='rpt_kpi_booking')
 df_fct_show = df_fct_booking.filter(
     (F.col('status') == 'Held')
 )
+
+# assign layer
+df_fct_guest = df_fct_show.withColumn(
+    'layer', H.value_when(F.col('group'), H.get_layer_hierachy_maps(4, 'rpt_kpi_guest'), 'isin').otherwise('KPI_GT_GT_SW')
+)
+
+# distinct guest
+df_fct_no_guest = df_fct_guest.groupBy(
+    df_fct_guest.appointment_date,
+    df_fct_guest.final_region,
+    df_fct_guest.dim_location_key,
+    df_crm_lead.lead_marketing_campaign_code,
+    df_fct_guest.final_channel_code,
+    df_fct_guest.final_lead_source,
+    df_fct_guest.layer,
+    df_users.user_name
+).agg(
+    F.countDistinct('silver_vw_meetings.id').alias('count')
+)
+
+# rename columns for dashboard
+col_rename_dict = {
+    'appointment_date': 'date',
+    'final_region': 'region',
+    'final_channel_code': 'channel',
+    'final_lead_source': 'lead_source',
+    'lead_marketing_campaign_code': 'campaign'
+}
+df_fct_no_guest = H.rename_cols(df_fct_no_guest, col_rename_dict)
+
+# add temp columns
+df_fct_no_guest = df_fct_no_guest.withColumns({
+    'date': F.to_date(F.col('date')),
+    'month': (F.year('date') * 100 + F.month('date')),
+    'year': F.year('date')
+})
+
+# Get from HK and SG only
+df_fct_no_guest = df_fct_no_guest.filter(
+    F.col('region').isin(['HK', 'SG'])
+)
+
+# write table, rpt_kpi_guest
+K.write_table(df_fct_no_guest, table='rpt_kpi_guest') # guest and show has the same definition in SuiteCRM
 
 # distinct appointment
 df_fct_no_show = df_fct_show.groupBy(
@@ -505,6 +558,7 @@ df_fct_no_show = df_fct_no_show.withColumn('layer', K.NO_LAYER_RENAME('SW'))
 
 # add temp columns
 df_fct_no_show = df_fct_no_show.withColumns({
+    'date': F.to_date(F.col('date')),
     'month': (F.year('date') * 100 + F.month('date')),
     'year': F.year('date')
 })
@@ -515,7 +569,6 @@ df_fct_no_show = df_fct_no_show.filter(
 )
 
 # write table, rpt_kpi_show
-K.write_table(df_fct_no_show, table='rpt_kpi_guest') # guest and show has the same definition in SuiteCRM
 K.write_table(df_fct_no_show, table='rpt_kpi_show')
 
 #====== [END] CELL 8 ======

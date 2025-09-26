@@ -32,13 +32,31 @@ REPORT_TABLE = lambda x: f'{REPORT_CATALOG}.{REPORT_SCHEMA}.{x}'
 CONST_SOURCE_GROUP_MAPS = {
     'Marketing Campaign': ['57', 'xw', 'marketing campaign'],
     'TI': ['50', 'ti'],
-    'WI': ['53', '55', '59'],
+    'WI': ['53', '55', '59', 'walk in'],
     'Corporate': ['58', 'corporate_event', 'corporate_lead', 'corporate_partnership', 'corporate'],
     'BR': ['60', '51', '54', 'br-360app', 'br-wechat', 'marketing_br', 'br-pos', 'br-360'],
     'Cold case': ['52', 'cold case'],
     'Others-Info': ['56']
 }
 
+def get_layer_hierachy_maps(layer_level: int, table_name: str):
+    """
+        1. Returns a dictionary of layer hierarchies based on the provided layer level and table name.
+        2. The dictionary is constructed based on the provided layer level and table name.
+        3. The dictionary contains the following keys:
+            (a) 'layer_level': The provided layer level.
+            (b) 'table_name': The provided table name.
+    """
+    layer_level = str(layer_level) # convert to string
+
+    layer_hierachy = {
+        '4' : {
+            'rpt_kpi_guest': {
+                'KPI_GT_GT_WI': 'WI'
+            }
+        }
+    }
+    return layer_hierachy.get(layer_level, {}).get(table_name, {})
 
 def fetch_table(spark: SparkSession, table_name: str):
     """

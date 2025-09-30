@@ -229,12 +229,14 @@ df_crm_lead = H.fetch_table(spark, 'silver_leads').select(
 df_fct_leads = df_vw_lead_account_modal.join(
     df_dim_location_360f,
     (df_dim_location_360f.dim_location_code == df_vw_lead_account_modal.final_location)
-    & (df_dim_location_360f.dim_location_code.isNotNull()),
+    & (df_dim_location_360f.dim_location_code.isNotNull())
+    & (df_dim_location_360f.dim_location_source == df_vw_lead_account_modal.final_region),
     'left'
 ).join(
     df_signed_dim_location_360f,
     (df_signed_dim_location_360f.signed_dim_location_code == df_vw_lead_account_modal.signed_location)
-    & (df_signed_dim_location_360f.signed_dim_location_code.isNotNull()),
+    & (df_signed_dim_location_360f.signed_dim_location_code.isNotNull())
+    & (df_signed_dim_location_360f.signed_dim_location_source == df_vw_lead_account_modal.final_region),
     'left'
 ).join(
     df_users,
@@ -273,11 +275,6 @@ df_fct_leads = df_fct_leads.withColumn(
     'lead_source_group': H.value_when(F.col('final_lead_source'), H.CONST_SOURCE_GROUP_MAPS, 'isin').otherwise(''),
 }).withColumn(
     'group', K.ML_GROUP_WHEN()
-).filter(
-    ~(
-        (F.col('final_region') == 'SG') &
-        (F.col("dim_location_key").contains('HK')) # to handle 'OSG' location for HK
-    )
 )
 
 # NMU based on signed_location
@@ -403,7 +400,8 @@ df_fct_booking = df_vw_meeting.join(
 ).join(
     df_dim_location_360f,
     (df_dim_location_360f.dim_location_code == df_vw_meeting.location)
-    & (df_dim_location_360f.dim_location_code.isNotNull()),
+    & (df_dim_location_360f.dim_location_code.isNotNull())
+    & (df_dim_location_360f.dim_location_source == df_vw_lead_account_modal.final_region),
     'left'
 ).join(
     df_users,
@@ -423,13 +421,6 @@ df_fct_booking = df_fct_booking.withColumns({
     'lead_source_group': H.value_when(F.col('final_lead_source'), H.CONST_SOURCE_GROUP_MAPS, 'isin').otherwise(''),
 }).withColumn(
     'group', K.ML_GROUP_WHEN()
-).filter(
-    (df_fct_booking.deleted == 0)
-    & (df_fct_booking.name == '1st time')
-    & ~ (
-        (F.col('final_region') == 'SG') &
-        (F.col("dim_location_key").contains('HK')) # to handle 'OSG' location for HK
-    )
 )
 
 # add layer column
@@ -2011,12 +2002,12 @@ df_lead_account = df_lead_account.withColumns({
 # success account
 ## filter
 df_lead_account_success = df_lead_account.filter(
-    F.col('success_date').isNotNull() & 
+    F.col('success_date').isNotNull() &
     (F.col('guest_status') == 'Success')
 )
 
 ## window
-### get first account 
+### get first account
 _window = Window.partitionBy('account_id').orderBy('success_date')
 df_lead_account_success = df_lead_account_success.withColumn(
     '_row', F.row_number().over(_window)
@@ -2065,7 +2056,7 @@ for _i, _m in enumerate(get_months()):
 
     # create is_success_month
     df_nmu_eb = df_nmu_eb.withColumn(
-        'is_success_month', 
+        'is_success_month',
         df_lead_account_success.success_month.isNotNull() &
         (df_lead_account_success.success_month == F.date_format(_m, K.MONTH_DATE_FORMAT))
     )
@@ -2076,11 +2067,11 @@ for _i, _m in enumerate(get_months()):
         df = set_current(df, _m)
 
         # filter
-        filter_col = F.col('current_date') if is_current else F.col('current_month_last_day') 
+        filter_col = F.col('current_date') if is_current else F.col('current_month_last_day')
         df = df.filter(
             df_nmu_eb.signed_date <= filter_col
         )
-        
+
 
         # select
         df = df.select(

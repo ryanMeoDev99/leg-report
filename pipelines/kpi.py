@@ -988,8 +988,13 @@ df_contact_outer = df_contact_outer.withColumn(
         u=df_book_limit.book_limit_unit_code_id, a=df_book_limit.book_limit_amount,
     )
 ).withColumn(
-    'is_all_clubs', K.IS_CLUB_WHEN(a=df_360_package.is_all_locations, s=df_360_package.is_single_location)
+    'is_all_clubs',
+    K.IS_CLUB_WHEN(
+        a=F.col('360_silver_package.is_all_locations').cast('int'),
+        s=F.col('360_silver_package.is_single_location').cast('int')
+    )
 )
+
 
 # groupby count
 df_contact_ct = df_contact_outer.groupBy(
@@ -1714,6 +1719,11 @@ df_nmuc = df_nmuc.groupBy(
     'date', 'region', 'dim_location_key', 'layer'
 ).agg(
     F.sum('count').alias('count')
+)
+
+df_nmuc = df_nmuc.withColumn(
+    'count',
+    F.col('count').cast('decimal(38,18)')
 )
 
 K.write_table(df_nmuc, table='rpt_kpi_nmu')

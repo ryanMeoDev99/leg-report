@@ -709,12 +709,13 @@ def ENDING_BALANCE_MEMBER_OTHER(
     
 
 ## check in
-CHECK_IN_WHEN = lambda id=F.col('package_type_id'):\
+CHECK_IN_WHEN = lambda id=F.col('contact_type_id'):\
     F.when(
-        id == 5,
-        'KPI_CIN_MEM_MEM'
+        id == 3, 'KPI_CIN_MEM_MEM'
+    ).when(
+        id == 2, 'KPI_CIN_GT_GT'
     ).otherwise(
-        'KPI_CIN_GT_GT'
+        'KPI_CIN_LD_LD'
     )
 
 ## suspension

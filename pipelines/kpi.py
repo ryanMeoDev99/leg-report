@@ -2247,64 +2247,23 @@ for _i, _m in enumerate(get_months()):
 #====== [MARKDOWN] CELL 70 ======
 #====== [START] CELL 71 ======
 
-df_checkin = spark.read.table(K.TABLE('silver_check_in'))
-
-time_scale = 1000
-df_checkin = df_checkin.withColumns({
-    'dim_location_key': K.concat_id(df_checkin, cols=['source', 'location_id']),
-    'source_client_service_id': K.concat_id(df_checkin, cols=['source', 'client_service_id']),
-
-    'check_in_utc': F.from_unixtime(F.col('check_in_time') / time_scale),
-}).withColumn(
-    'check_in_datetime', F.from_utc_timestamp('check_in_utc', 'Asia/Hong_Kong')
-).withColumn(
-    'check_in_date', F.to_date('check_in_datetime'),
-).withColumns({
-    'check_in_year': F.year('check_in_date'),
-    'check_in_month': F.month('check_in_date'),
-    'check_in_day': F.day('check_in_date'),
-})
-
-df_checkin_3a = df_checkin.join(
-    df_360_agreement,
-    df_checkin.source_client_service_id == df_360_agreement.source_ext_ref_agreement_id,
-    'left'
-)
-
-# group by daily
-df_checkin_ct = df_checkin_3a.groupby(
-    'dim_location_key',
-    F.substring('dim_location_key', 0, 2).alias('region'),
-
-    F.col('check_in_date').alias('date'),
-    df_360_agreement.package_type_id
-).agg(
-    F.count_distinct('client_id').alias('count')
-)
-
-# # window
-# _order_window = Window.partitionBy('dim_location_key', 'check_in_year', 'check_in_month').orderBy('check_in_date')
-# df_checkin_sum = df_checkin_ct.withColumn(
-#     '_order', F.row_number().over(_order_window)
-# )
-
-# _window = Window.partitionBy('dim_location_key', 'check_in_year', 'check_in_month').orderBy('_order')
-# df_checkin_sum = df_checkin_sum.withColumn(
-#     'avg_mtd', F.sum('n').over(_window) / F.col('check_in_day')
-# )
+# Direct Gold Table Call
+df_checkin = spark.read.table(K.TABLE('fct_fpa_check_in'))
+df_checkin = df_checkin.withColumn("date", F.to_date("check_in_date", "yyyy-MM-dd"))
+df_checkin = df_checkin.withColumnRenamed("source", "region")
 
 # layer
-df_checkin_when = df_checkin_ct.withColumn(
+df_checkin_when = df_checkin.withColumn(
     'layer', K.CHECK_IN_WHEN()
 )
 
 df_checkin_layer = df_checkin_when.groupBy(
     'dim_location_key',
-    'region',
+    'region', 
     'date',
     'layer',
 ).agg(
-    F.sum('count').alias('count')
+    F.sum('n').alias('count')
 )
 
 K.write_table(df_checkin_layer, table='rpt_kpi_checkin')

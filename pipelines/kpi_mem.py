@@ -1,6 +1,6 @@
 #====== [START] CELL 1 ======
 
-#
+
 import sys
 sys.path.append('./')
 
@@ -202,12 +202,12 @@ df_account_location = df_account.join(
 # success account
 ## filter
 df_account_success = df_account.filter(
-    F.col('success_date').isNotNull() &
+    F.col('success_date').isNotNull() & 
     (F.col('guest_status') == 'Success')
 )
 
 ## window
-### get first account
+### get first account 
 _window = Window.partitionBy('ref_id').orderBy('success_date')
 df_account_success = df_account_success.withColumn(
     '_row', F.row_number().over(_window)
@@ -242,7 +242,7 @@ df_agreement_status_history = spark.read.table(K.TABLE('silver_agreement_status_
 # create current month and next month
 df_agreement_status_history = df_agreement_status_history.withColumns({
     'source_agreement_id': K.concat_id(df_agreement_status_history, cols=['source', 'agreement_id']),
-
+    
     'max_ending_date': F.ifnull('ending_date', F.lit('2099-12-31')),
 })
 
@@ -577,7 +577,7 @@ df_contact_package_bll = df_contact_package_pst.join(
     'left'
 )
 
-# LEFT JOIN LATERAL previous_agreement
+# LEFT JOIN LATERAL previous_agreement 
 
 ## create id for per row join
 df_cpb = df_contact_package_bll.withColumn(
@@ -587,7 +587,7 @@ df_cpb = df_contact_package_bll.withColumn(
 df_contact_agreement_prev = df_cpb.join(
     df_membership_agreement,
     (df_membership.source_contact_id == df_360_agreement.source_contact_id)
-    & (df_360_agreement.prev_gap_reference <= df_membership.start_date)
+    & (df_360_agreement.prev_gap_reference <= df_membership.start_date) 
     & (df_360_agreement_package.is_membership == 1),
     'left'
 )
@@ -596,13 +596,13 @@ df_contact_agreement_prev = df_cpb.join(
 pa_window = Window.partitionBy('_partition_id').orderBy(df_360_agreement.order_date.desc())
 
 df_contact_agreement_prev_window = df_contact_agreement_prev.withColumn(
-    '_row',
+    '_row', 
     F.row_number().over(pa_window)
 ).filter(F.col('_row')==1).drop('_row')
 
 # outer - create day
 df_contact_outer = df_contact_agreement_prev_window.withColumn(
-    'day_gap',
+    'day_gap', 
     F.datediff(df_membership.signed_date, df_360_agreement.prev_gap_reference)
 )
 
@@ -611,20 +611,20 @@ df_contact_outer = df_contact_outer.withColumn(
     'nmu_cat', K.NUM_CAT_WEHN(p=df_360_package.package_term_id, m=df_360_package.min_committed_month)
 ).withColumn(
     'package_gp', K.PACKAGE_GP_WHEN(
-        p=df_360_package.package_term_id, m=df_360_package.min_committed_month,
+        p=df_360_package.package_term_id, m=df_360_package.min_committed_month, 
         t=df_membership.total_session, s=df_360_package.service_category_id,
         u=df_book_limit.book_limit_unit_code_id, a=df_book_limit.book_limit_amount,
     )
 ).withColumn(
-    'is_all_clubs', K.IS_CLUB_WHEN(a=df_360_package.is_all_locations, s=df_360_package.is_single_location)
+    'is_all_clubs', K.IS_CLUB_WHEN(a=df_360_package.is_all_locations.cast('int'), s=df_360_package.is_single_location.cast('int'))
 )
 
 # groupby count
 df_contact_ct = df_contact_outer.groupBy(
     F.to_date(df_membership.signed_date).alias('date'),
-    df_membership.source.alias('region'),
-    df_360_package.package_term_id,
-    df_package_sub_type.package_sub_type_code,
+    df_membership.source.alias('region'), 
+    df_360_package.package_term_id, 
+    df_package_sub_type.package_sub_type_code, 
     df_membership.dim_location_key,
     'nmu_cat', 'package_gp', 'is_all_clubs',
 ).agg(
@@ -699,8 +699,8 @@ df_contact_status_history = df_contact_status_history.withColumn(
 
 #
 df_csh_filter = df_contact_status_history.filter(
-    F.col('contact_status_id').isin([1, 21, 25, 28, 33]) &
-    (F.col('source') == 'CN') &
+    F.col('contact_status_id').isin([1, 21, 25, 28, 33]) & 
+    (F.col('source') == 'CN') & 
     (F.col('active') == 1)
 )
 
@@ -725,7 +725,7 @@ df_csh_clcci = df_csh_filter.join(
     'left'
 )
 
-# create
+# create 
 df_csh_clcci = df_csh_clcci.withColumns({
     'lead_source_group': K.CN_SOURCE_GROUP_WHEN(),
     'market_lead': K.CN_MARKET_LEAD_WHEN(),
@@ -802,10 +802,10 @@ df_termination = K.prefix(df_termination, 'termination')
 def get_months(times:int=None):
     if times is None:
         times = 12 + date.today().month
-
+    
     return [
         F.add_months(
-            F.current_date(),
+            F.current_date(), 
             -_
         )
         for _ in range(times)
@@ -818,12 +818,12 @@ def set_current(df, current=None):
     df = df\
         .withColumn('current_date', current)\
         .withColumn(
-            'current_month',
+            'current_month', 
             F.date_trunc('month', 'current_date')
         )\
         .withColumn('current_month_last_day', F.last_day('current_month'))\
             .withColumn(
-                'is_effective_month',
+                'is_effective_month', 
                 F.col('current_month_last_day').between(F.col('effective_date'), F.col('max_ending_date'))
             )\
         .withColumn('next_month', F.add_months('current_month', 1))
@@ -875,7 +875,7 @@ def current_cmal_ash_window(df):
             F.ifnull(df_360_agreement.end_date, F.lit('2099-12-31'))
         )
 
-    #
+    # 
     expr1 = F.when(
         _adjusted_date(id=[2, 3, 7, 8, 9, 10]) >= df.current_month_last_day,  # <---
         0
@@ -939,13 +939,13 @@ MEMBERSHIP_SCHEMA = {
 
 def dict_to_when(mapping:dict, layer_col:str='layer'):
     when_expr = None
-
+    
     for key, value in mapping.items():
         if when_expr is None:
             when_expr = F.when(F.col(layer_col) == key, F.lit(value))
         else:
             when_expr = when_expr.when(F.col(layer_col) == key, F.lit(value))
-
+    
     return when_expr
 
 def layer_to_activity(df, layer_col:str='layer'):
@@ -975,7 +975,7 @@ def write_table_mem(df, activity:str, activity_type:str='KPI', mode:str='append'
 
     for _ in _lost:
         df = df.withColumn(
-            _,
+            _, 
             F.lit(None).cast(MEMBERSHIP_SCHEMA[_])
         )
 
@@ -1054,7 +1054,7 @@ df_leads_layer = df_leads_layer.filter(
 # groupby
 df_leads_rpt = df_leads_layer.groupBy(
     df_leads.date,
-    df_leads.region_is_hk.alias('region'),
+    df_leads.region_is_hk.alias('region'), 
     df_dim_location.dim_location_key,
 
     df_leads.marketing_campaign.alias('campaign'),
@@ -1064,7 +1064,7 @@ df_leads_rpt = df_leads_layer.groupBy(
     df_leads.lead_source,
 
     df_user.user_name,
-
+    
 ).agg(
     F.count('*').alias('count'),
     F.sum('per_budget_amount').alias('budget')
@@ -1072,12 +1072,12 @@ df_leads_rpt = df_leads_layer.groupBy(
 
 df_leads_rpt = df_leads_rpt.withColumn('layer', K.NO_LAYER_RENAME('LD'))
 
-# HK
+# HK 
 df_leads_rpt = df_leads_rpt.filter(
     F.col('region').isin(['HK', 'SG'])
 )
 
-K.write_table(df_leads_rpt, table='rpt_kpi_leads')
+# K.write_table(df_leads_rpt, table='rpt_kpi_leads')
 
 #====== [END] CELL 45 ======
 
@@ -1092,7 +1092,7 @@ df_leads_layer = df_leads_layer.filter(
     (~F.col('status').isin('Duplicate Lead', 'Existing Member', 'Duplicate', 'Invalid', 'Unreachable') | F.col('status').isNull())
 )
 
-#
+# 
 _dfc = df_contact.select('id', 'ext_ref_contact_id').distinct()
 df_leads_mem = df_leads_layer.join(
     _dfc,
@@ -1102,7 +1102,7 @@ df_leads_mem = df_leads_layer.join(
 
 df_leads_mem = df_leads_mem.groupBy(
     df_leads.date.alias('activity_date'),
-    df_leads.region_is_hk.alias('region'),
+    df_leads.region_is_hk.alias('region'), 
     df_dim_location.dim_location_key.alias('location'),
 
     df_leads.id.alias('activity_id'),
@@ -1114,7 +1114,7 @@ df_leads_mem = df_leads_mem.groupBy(
     F.count('*').alias('value'),
 )
 
-# HK
+# HK 
 df_leads_mem = df_leads_mem.filter(
     F.col('region').isin(['HK', 'SG'])
 )
@@ -1163,7 +1163,7 @@ df_meeting_booking = df_meeting_booking.groupBy(
     F.count('*').alias('value'),
 )
 
-# HK
+# HK 
 df_meeting_booking = df_meeting_booking.filter(
     F.col('region').isin(['HK', 'SG'])
 )
@@ -1212,7 +1212,7 @@ df_meeting_show = df_meeting_show.groupBy(
     F.count('*').alias('value'),
 )
 
-# HK
+# HK 
 df_meeting_show = df_meeting_show.filter(
     F.col('region').isin(['HK', 'SG'])
 )
@@ -1263,7 +1263,7 @@ df_meeting_guest = df_meeting_guest.groupBy(
     F.count('*').alias('value'),
 )
 
-# HK
+# HK 
 df_meeting_guest = df_meeting_guest.filter(
     F.col('region').isin(['HK', 'SG'])
 )
@@ -1288,7 +1288,7 @@ write_table_mem(df_meeting_guest, activity='Guest')
 
 # groupby count
 df_contact_ct = df_contact_outer.select(
-    df_membership.source.alias('region'),
+    df_membership.source.alias('region'), 
     df_membership.dim_location_key.alias('location'),
 
     df_360_agreement.agreement_no.alias('activity_id'),
@@ -1297,8 +1297,8 @@ df_contact_ct = df_contact_outer.select(
 
     F.to_date(df_membership.signed_date).alias('activity_date'),
 
-    df_360_package.package_term_id,
-    df_package_sub_type.package_sub_type_code,
+    df_360_package.package_term_id, 
+    df_package_sub_type.package_sub_type_code, 
     'nmu_cat', 'package_gp', 'is_all_clubs',
 )
 
@@ -1359,10 +1359,10 @@ df_nmuc = df_nmuc.withColumn(
         'prepaid_others': ['Prepaid', 'Prepaid - Others', None],
 
         'package_1_months_all_clubs': ['Packages', '1 Month - All Clubs', None],
-        'package_2_months_1_clubs': ['Packages', '2 Months - 1 Club', None],
-        'package_3_months_1_clubs': ['Packages', '3 Months - 1 Club', None],
-        'package_4_months_1_clubs': ['Packages', '4 Months - 1 Club', None],
-        'package_5_months_1_clubs': ['Packages', '5 Months - 1 Club', None],
+        'package_2_months_1_clubs': ['Packages', '2 Months - 1 Club', None], 
+        'package_3_months_1_clubs': ['Packages', '3 Months - 1 Club', None], 
+        'package_4_months_1_clubs': ['Packages', '4 Months - 1 Club', None], 
+        'package_5_months_1_clubs': ['Packages', '5 Months - 1 Club', None], 
     })
 )
 
@@ -1414,7 +1414,7 @@ for _i, _m in enumerate(get_months(1)):
     # join locatoin + 360f_location
     df_c_location_360f = df_c_pst.join(
         df_location_full,
-        (df_contact.home_location_id == df_location_full.location_id)
+        (df_contact.home_location_id == df_location_full.location_id) 
         & (df_contact.source == df_location_full.location_source),
         'left'
     )
@@ -1445,7 +1445,7 @@ for _i, _m in enumerate(get_months(1)):
 
     # filter
     df_c_window = df_c_window.filter(
-        (F.col('is_terminated') == 1) &
+        (F.col('is_terminated') == 1) & 
         (F.col('rn') == 1) &
 
         df_agreement_status_history.effective_date.isNotNull()
@@ -1461,7 +1461,7 @@ for _i, _m in enumerate(get_months(1)):
 
     # group by
     df_c_ct = df_c_layer.groupBy(
-        'region',
+        'region', 
         df_location_full.dim_location_key.alias('location'),
 
         df_contact.ext_ref_contact_id.alias('client_id'),
@@ -1584,7 +1584,7 @@ df_agreement_join = df_agreement_join.filter(
     df_package.package_type_id == 1
 )
 
-# window
+# window 
 contact_window = Window.partitionBy(df_agreement.contact_id).orderBy(
     'signed_date', F.to_date('end_date'), df_agreement.agreement_no
 )
@@ -1599,7 +1599,7 @@ lag_map = {
 
 for _c, _k in lag_map.items():
     df_agreement_join = df_agreement_join.withColumn(
-        _c,
+        _c, 
         F.coalesce(
             _c,
             F.lag(_k).over(contact_window)
@@ -1614,17 +1614,17 @@ df_agreement_select = df_agreement_join.select(
     df_agreement.agreement_no.alias('activity_id'),
     df_contact.ext_ref_contact_id.alias('client_id'),
 
-    #
+    # 
     df_agreement.contact_id,
     df_agreement.signed_date,
     df_agreement.from_agreement_id,
 
     F.substring(df_location_full.dim_location_key, 0, 2).alias('region'),
-    df_location_full.dim_location_key.alias('location'),
+    df_location_full.dim_location_key.alias('location'), 
     df_location_full.location_code,
 
     df_package.package_name,
-    df_package.package_sub_type_id,
+    df_package.package_sub_type_id, 
 
     df_package_sub_type.package_sub_type_code,
 
@@ -1648,7 +1648,7 @@ df_agreement_ct = df_agreement_select.groupBy(
     'client_id',
     'contact_id',
     'activity_date',
-
+    
     'layer',
 ).agg(
     F.count('*').alias('value')
@@ -1656,14 +1656,14 @@ df_agreement_ct = df_agreement_select.groupBy(
 
 df_agreement_ct = df_agreement_ct.withColumn(
     'layer', dict_to_when({
-        'drop-in': ['Drop-in\'s', None, None],
-        'up_reform_pilates': ['Updrade', 'Upgrade Reformer Pilates', None],
-        'up_dp': ['Updrade', 'Upgrade (Dues to Prepaid)', None],
+        'drop-in': ['Drop-in\'s', None, None], 
+        'up_reform_pilates': ['Updrade', 'Upgrade Reformer Pilates', None], 
+        'up_dp': ['Updrade', 'Upgrade (Dues to Prepaid)', None], 
         'up_pp': ['Updrade', 'Upgrade (Prepaid to Prepaid)', None],
         'up_dd': ['Updrade', 'Upgrade (Dues to Dues)', None],
-        'renew_pp': ['Renewal', 'Renewal (Prepaid to Prepaid Renew)', None],
-        'renew_pd': ['Renewal', 'Renewal (Prepaid Renewal to Dues)', None],
-        'renew_reform_pilates': ['Renewal', 'Renewal Reformer Pilates', None],
+        'renew_pp': ['Renewal', 'Renewal (Prepaid to Prepaid Renew)', None], 
+        'renew_pd': ['Renewal', 'Renewal (Prepaid Renewal to Dues)', None], 
+        'renew_reform_pilates': ['Renewal', 'Renewal Reformer Pilates', None], 
     })
 )
 
@@ -1714,7 +1714,7 @@ for _i, _m in enumerate(get_months(1)):
         df_360_package.min_committed_month,
 
         df_agreement_status_history.agreement_status_id,
-
+        
         df_location_full.dim_location_key,
     )
 
@@ -1727,7 +1727,7 @@ for _i, _m in enumerate(get_months(1)):
         'inner'
     )
 
-    #
+    # 
     df_tr_termination = df_termination.join(
         df_tr_contact,
         df_contact.source_member_id == df_termination.termination_region_rssid,
@@ -1740,7 +1740,7 @@ for _i, _m in enumerate(get_months(1)):
 
     # groupby
     df_tr_ct = df_tr_layer.groupBy(
-        F.col('termination_date').alias('activity_date'),
+        F.col('termination_date').alias('activity_date'), 
         F.col('source').alias('region'),
 
         df_360_agreement.contact_id,
@@ -1813,7 +1813,7 @@ df_checkin_layer = df_checkin_3ap_package.groupBy(
     df_360_agreement.contact_id,
     df_checkin.id.alias('activity_id'),
     F.col('dim_location_key').alias('location'),
-    F.substring('dim_location_key', 0, 2).alias('region'),
+    F.substring('dim_location_key', 0, 2).alias('region'), 
 
     F.col('check_in_date').alias('activity_date'),
 
@@ -1960,7 +1960,7 @@ layer_d={
     174: ('Optimise360 - packages (POS)', None),
     175: ('Optimise360 - packages (New)', None),
     176: ('Optimise360 - packages (Renew)', None),
-
+    
     178: ('Academy (Yoga) - SGP', None),
     179: ('Academy (Pilates) - SGP', None),
     180: ('Academy (GX) - SGP', None),
@@ -2008,7 +2008,7 @@ def get_activity(layer:int):
         return 'Others'
     else:
         return 'New members sales >> NMU'
-
+    
 def get_activity_id(layer:int):
     if layer == 193: # outstanding no col
         return F.lit(None).cast('string')
@@ -2031,7 +2031,7 @@ for _no, _name in layer_d.items():
                 F.col(_value['id']).alias('contact_id'),
                 get_activity_id(_no).alias('activity_id'),
                 F.col(_value['sales']).alias('value'),
-
+                
                 F.array(
                     F.lit(_name[0]),
                     F.lit(_name[1]),

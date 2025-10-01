@@ -28,6 +28,6 @@ def extract_code_from_ipynb(ipynb_file, output_file):
 
 # Change the filename below to your corresponding input and output filename
 dir = 'scripts'
-input_file = f'{dir}/kpi_mem.ipynb'
+input_file = f'{dir}/fct_total_revenue.ipynb'
 output_file = f'{dir}/output.py'
 extract_code_from_ipynb(input_file, output_file)

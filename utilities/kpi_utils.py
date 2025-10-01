@@ -50,7 +50,7 @@ def prefix_diff(left:str, right:str, delimiter:str='_'):
         if right.startswith(_check):
             left = _prefix
             break
-
+        
     return delimiter.join([left, right]) if left else right
 
 def prefix(df, text:str, delimiter='_'):
@@ -67,7 +67,7 @@ def concat_id(df, cols):
 
     for _ in cols:
         _c = F.col(_).cast('bigint') if _map[_].startswith('decimal') else F.col(_)
-        _cl.append(_c)
+        _cl.append(_c) 
 
     return F.concat(*_cl)
 
@@ -93,7 +93,7 @@ def value_when(col, maps:dict, method:str='__eq__', condition:F.Column=None, oth
 
         # concat when
         _ws = F.when(_cond, _new) if _ws is None else _ws.when(_cond, _new)
-
+        
     if otherwise:
         _ws = _ws.otherwise(_c)
 
@@ -109,7 +109,7 @@ def create_nested(df, whens:list, layer_col:str='layer'):
 
     # concat all when array + filter none
     df = df.withColumn(
-        layer_col,
+        layer_col, 
         F.array_compact(
             F.array(tmp_cols)
         )
@@ -156,7 +156,7 @@ base_location_maps = {
 
 # leads location
 lead_location_maps = {
-    **base_location_maps,
+    **base_location_maps, 
     'HH': 'HUT',
 }
 
@@ -164,7 +164,7 @@ LEAD_LOCATION_WHEN = lambda c=F.col('location'): value_when(c, maps=lead_locatio
 
 # account location
 account_location_maps = {
-    **base_location_maps,
+    **base_location_maps, 
     'apm': 'APM',
 }
 
@@ -195,7 +195,7 @@ REGION_IS_HK_WHEN = lambda r=F.col('region_2'), f=F.col('is_hk'):\
 sh_cn_maps = {
     'CN': 'SH'
 }
-
+SH_CN_WHEN_ALT = lambda c=F.col('final_region'): value_when(c, maps=sh_cn_maps, otherwise=True)
 SH_CN_WHEN = lambda c=F.col('region'): value_when(c, maps=sh_cn_maps, otherwise=True)
 
 # lead_source_group
@@ -226,11 +226,11 @@ CN_SOURCE_GROUP_WHEN = lambda c=F.col('lead_source_type_id'): value_when(c, maps
 # market_lead
 MARKET_LEAD_WHEN = lambda s=F.col('lead_source'), c=F.col('channel_code'): \
     F.when(
-        s.isin(['57', 'XW']) &
+        s.isin(['57', 'XW']) & 
         c.isin(['AI', ' CN', 'EP', 'FY', 'IZ', 'JF', 'KQ', 'NC', 'NH', 'NR', 'PZ', 'QJ']),
         'Webform'
     ).when(
-        s.isin(['57', 'XW']) &
+        s.isin(['57', 'XW']) & 
         c.isin(['JI', 'KH', 'NI']),
         'SEM'
     ).otherwise('Others')
@@ -238,19 +238,19 @@ MARKET_LEAD_WHEN = lambda s=F.col('lead_source'), c=F.col('channel_code'): \
 # cn market_lead
 CN_MARKET_LEAD_WHEN = lambda lstid=F.col('lead_source_type_id'), ccid=F.col('channel_code_id'): \
     F.when(
-        lstid.isin([73, 914]) &
+        lstid.isin([73, 914]) & 
         ccid.isin([25, 26, 33]),
         'Webform'
     ).when(
-        lstid.isin([73, 914]) &
+        lstid.isin([73, 914]) & 
         ccid.isin([23, 24, 34]),
         'SEM'
     ).when(
-        lstid.isin([73, 914]) &
+        lstid.isin([73, 914]) & 
         ccid.isin([27, 50, 51]),
         'Redbook'
     ).when(
-        lstid.isin([73, 914]) &
+        lstid.isin([73, 914]) & 
         ccid.isin([31, 32, 36, 29, 35, None]),
         'Others'
     )
@@ -274,7 +274,7 @@ NO_LAYER_WHEN = lambda c: value_when(c, maps=no_layer_maps, method='like')
 LEAD_LAYER_WHEN = lambda c=F.col('group'): NO_LAYER_WHEN(c)\
         .when(
             c.isin('Others-Info', 'Cold case', ''), 'KPI_XX_XX_O'
-        )
+        ) 
 
 NMU_LAYER_WHEN = lambda c=F.col('group'): NO_LAYER_WHEN(c)\
         .when(
@@ -285,7 +285,7 @@ NMU_LAYER_WHEN = lambda c=F.col('group'): NO_LAYER_WHEN(c)\
 # ml group when
 ML_GROUP_WHEN = lambda g=F.col('lead_source_group'), m=F.col('market_lead'): \
     F.when(
-        g == 'Marketing Campaign',
+        g == 'Marketing Campaign', 
         F.concat(F.lit('ML_'), m)
     ).otherwise(g)
 
@@ -401,9 +401,9 @@ IS_CLUB_WHEN = lambda a=F.col('is_all_locations'), s=F.col('is_single_location')
 def NMUC_LAYER_WHEN(
     pgp=F.col('package_gp'), ptid=F.col('package_term_id'), pstc=F.col('package_sub_type_code'), nc=F.col('nmu_cat'), iac=F.col('is_all_clubs'), reg=F.col('region')
 ):
-
+    
     region_when = (
-        ((pstc == 'MEM') & (reg == 'HK')) |
+        ((pstc == 'MEM') & (reg == 'HK')) | 
         reg.isin('CN', 'SG')
     )
 
@@ -438,9 +438,9 @@ def NMUC_LAYER_WHEN(
         'prepaid_3_months': pre_when('3') & (pgp == 'pre-3'),
 
         **{
-            f'prepaid-{m}-months{t}': pre_when(m) & (pgp == f'pre-{m}{t}')
+            f'prepaid-{m}-months{t}': pre_when(m) & (pgp == f'pre-{m}{t}') 
             for m, t in I.product(
-                ['6', '12', '18', '24'],
+                ['6', '12', '18', '24'], 
                 ['', '-wRP']
             )
         },
@@ -454,7 +454,7 @@ def NMUC_LAYER_WHEN(
 def NMUC_LAYER_PACKAGE_WHEN(
     pstc=F.col('package_sub_type_code'), nc=F.col('nmu_cat'), iac=F.col('is_all_clubs')
 ):
-
+    
     package_when = lambda n, i=0: (iac == i) & (nc == n) & (pstc == 'ST')
 
     _map = {
@@ -478,11 +478,11 @@ def NMUC_LAYER_OTHER_WHEN(
     )
 
 def RENEWAL_UPGRADE_WHEN(
-    pn=F.upper('package_name'), fai=F.col('from_agreement_id'),
+    pn=F.upper('package_name'), fai=F.col('from_agreement_id'), 
     lptn=F.col('last_package_term_name'), ptn=F.col('package_term_name'), pstc=F.col('package_sub_type_code'),
     reg=F.col('region')
 ):
-
+    
     region_when = (
         ((pstc == 'MEM') & reg.isin(['HK', 'SG'])) |
         reg.isin(['CN'])
@@ -554,7 +554,7 @@ IS_MEMBER_WHEN = lambda s=F.col('source'), t=F.col('package_type_id'), st=F.col(
 
 IS_TERMINATED = lambda id=F.col('agreement_status_id'):\
     F.when(
-        id.isin(2, 3, 4, 7),
+        id.isin(2, 3, 4, 7), 
         1
     ).otherwise(0)
 
@@ -605,26 +605,40 @@ TERMINATION_REQUEST_WHEN = lambda tid=F.col('package_term_id'), mcm=F.col('min_c
 def ENDING_BALANCE_MEMBER_WHEN(
     stid=F.col('package_sub_type_id'), tid=F.col('package_term_id'), mcm=F.col('min_committed_month'), reg=F.col('region')
 ):
-    region_when = (
+    region_when_2 = (
+        (stid.isin(8,9) & (reg == 'HK')) | 
+        (stid.isin(1,2) & (reg == 'SG')) | 
+        (reg == 'CN')
+    )
+    region_when_1 = (
         (stid.isin(9) & (reg == 'HK')) | 
         (stid.isin(2) & (reg == 'SG')) | 
         (reg == 'CN')
     )
 
-    autopay_when = lambda _: region_when & (tid == 1) & (mcm == _) 
-    prepaid_when = lambda _: region_when & (tid == 2) & (mcm == _) 
+    autopay_when_1 = lambda _: region_when_1 & (tid == 1) & (mcm == _)
+    autopay_when_2 = lambda _: region_when_2 & (tid == 1) & (mcm == _) 
+    prepaid_when_1 = lambda _: region_when_1 & (tid == 2) & (mcm == _)
+    prepaid_when_2 = lambda _: region_when_2 & (tid == 2) & (mcm == _) 
 
     _map = {
         # autopay
         **{
-            f'{_}_month_autopay': autopay_when(_) for _ in [3, 6, 12]
+            f'{_}_month_autopay': autopay_when_1(_) for _ in [3]
+        },
+
+        **{
+            f'{_}_month_autopay': autopay_when_2(_) for _ in [6, 12]
         },
 
         # prepaid
         **{
-            f'{_}_month_prepaid': prepaid_when(_) for _ in [3, 6, 12, 18, 24]
-        }
+            f'{_}_month_prepaid': prepaid_when_1(_) for _ in [3]
+        },
 
+        **{
+            f'{_}_month_prepaid': prepaid_when_2(_) for _ in [6, 12, 18, 24]
+        }
     }
 
     return concat_when(_map)
@@ -639,7 +653,7 @@ def ENDING_BALANCE_MEMBER_SHORT_WHEN (
     )
 
     return F.when(
-        region_when & mcm.between(1, 12),
+        region_when & mcm.between(1, 5),
         'short_term'
     )
 
@@ -654,24 +668,26 @@ def ENDING_BALANCE_MEMBER_OTHER(
     )
 
     region_cond2_when = (
-        (stid.isin([9]) & (reg == 'HK')) | 
-        (stid.isin([2]) & (reg == 'SG')) | 
+        (~(stid.isin([9])) & (reg == 'HK')) | 
+        (~(stid.isin([2])) & (reg == 'SG')) | 
         (reg == 'CN') 
     )
 
+    region_cond3_when = (
+        (~(stid.isin([8,9])) & (reg == 'HK')) | 
+        (~(stid.isin([1,2])) & (reg == 'SG')) | 
+        (reg == 'CN') 
+    )
+
+    region_combine_when = (
+        (region_cond1_when & ~mcm.between(1, 5))
+        | (tid.isin([1,2]) & region_cond2_when & ~mcm.isin([3])) 
+        | (tid.isin([1]) & region_cond3_when & ~mcm.isin([6, 12])) 
+        | (tid.isin([2]) & region_cond3_when & ~mcm.isin([6, 12, 18, 24]))
+    )
+
     df = df.withColumns({
-        '_cond1': F.when(
-            region_cond1_when & ~mcm.between(1, 12),
-            cid
-        ),
-        '_cond2': F.when(
-            (tid == 2) & region_cond2_when & ~mcm.isin([3, 6, 12, 18, 24]),
-            cid
-        ).when(
-            (tid == 1) & region_cond2_when & ~mcm.isin([3, 6, 12]),
-            cid
-        ),
-        # 
+        '_cond1': F.when(region_combine_when, cid),
         'layer': F.lit('KPI_MEB_MEB_MEB'),
     })
 
@@ -680,18 +696,17 @@ def ENDING_BALANCE_MEMBER_OTHER(
         *group
     ).agg(
         F.count_distinct('_cond1').alias('_cond1'),
-        F.count_distinct('_cond2').alias('_cond2'),
     )
 
     df = df.withColumn(
         'count', 
-        F.col('_cond1') + F.col('_cond2')
+        F.col('_cond1')
     ).drop(
-        '_cond1', '_cond2',
+        '_cond1',
     )
 
     return df
-
+    
 
 ## check in
 CHECK_IN_WHEN = lambda id=F.col('package_type_id'):\

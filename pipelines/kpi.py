@@ -337,7 +337,7 @@ K.write_table(df_fct_no_leads, table='rpt_kpi_leads')
 #### NMU
 # add layer column
 df_fct_nmu = df_fct_nmu.withColumn(
-    'layer', K.LEAD_LAYER_WHEN(),
+    'layer', K.NMU_LAYER_WHEN(),
 )
 
 # distinct nmu/success
@@ -421,6 +421,10 @@ df_fct_booking = df_fct_booking.withColumns({
     'lead_source_group': H.value_when(F.col('final_lead_source'), H.CONST_SOURCE_GROUP_MAPS, 'isin').otherwise(''),
 }).withColumn(
     'group', K.ML_GROUP_WHEN()
+).filter(
+    (df_fct_booking.deleted == False)
+    & (df_fct_booking.name == '1st time')
+    & (F.col('lead_source_group') != 'WI') # Walk-in is excluded
 )
 
 # add layer column
@@ -2259,7 +2263,7 @@ df_checkin_when = df_checkin.withColumn(
 
 df_checkin_layer = df_checkin_when.groupBy(
     'dim_location_key',
-    'region', 
+    'region',
     'date',
     'layer',
 ).agg(

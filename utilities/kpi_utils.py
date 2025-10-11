@@ -4,7 +4,7 @@ from pyspark.sql import SparkSession
 import itertools as I
 
 ### config
-CATALOG = 'uat_catalog'
+CATALOG = 'prod_catalog'
 SCHEMA = 'lakehouse'
 
 REPORT_CATALOG = 'leg_uat'

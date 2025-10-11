@@ -16,7 +16,7 @@ from datetime import date
 import itertools as I
 
 ### config
-CATALOG = 'uat_catalog'
+CATALOG = 'prod_catalog'
 SCHEMA = 'lakehouse'
 
 REPORT_CATALOG = 'leg_uat'

@@ -48,7 +48,7 @@ print(last_year)
 
 #====== [START] CELL 4 ======
 
-PURE_CATALOG = 'uat_catalog'
+PURE_CATALOG = 'prod_catalog'
 PURE_SCHEMA = 'lakehouse'
 
 TABLE = lambda x: f'{PURE_CATALOG}.{PURE_SCHEMA}.{x}'

@@ -8,11 +8,10 @@ import kpi_utils
 
 import importlib
 importlib.reload(kpi_utils)
-
-import kpi_utils as K
-
 import helpers
 importlib.reload(helpers)
+
+import kpi_utils as K
 import helpers as H
 
 #
@@ -47,9 +46,13 @@ K.REPORT_SCHEMA = dbutils.widgets.get("LEG_SCHEMA")
 
 
 
+
 #====== [MARKDOWN] CELL 3 ======
 
+
+
 #====== [MARKDOWN] CELL 4 ======
+
 #====== [START] CELL 5 ======
 
 ### dim location
@@ -104,7 +107,9 @@ df_location_full = df_location.join(
 
 
 
+
 #====== [MARKDOWN] CELL 6 ======
+
 #====== [START] CELL 7 ======
 
 # 360 package
@@ -570,7 +575,9 @@ K.write_table(df_fct_no_show, table='rpt_kpi_show')
 
 
 
+
 #====== [MARKDOWN] CELL 9 ======
+
 #====== [START] CELL 10 ======
 
 df_account = spark.read.table(K.TABLE('silver_accounts'))
@@ -594,12 +601,12 @@ df_account_location = df_account.join(
 # success account
 ## filter
 df_account_success = df_account.filter(
-    F.col('success_date').isNotNull() &
+    F.col('success_date').isNotNull() & 
     (F.col('guest_status') == 'Success')
 )
 
 ## window
-### get first account
+### get first account 
 _window = Window.partitionBy('ref_id').orderBy('success_date')
 df_account_success = df_account_success.withColumn(
     '_row', F.row_number().over(_window)
@@ -624,7 +631,9 @@ df_fct_account = df_fct_account.withColumns({
 
 
 
+
 #====== [MARKDOWN] CELL 12 ======
+
 #====== [START] CELL 13 ======
 
 df_agreement_status_history = spark.read.table(K.TABLE('silver_agreement_status_history'))
@@ -632,7 +641,7 @@ df_agreement_status_history = spark.read.table(K.TABLE('silver_agreement_status_
 # create current month and next month
 df_agreement_status_history = df_agreement_status_history.withColumns({
     'source_agreement_id': K.concat_id(df_agreement_status_history, cols=['source', 'agreement_id']),
-
+    
     'max_ending_date': F.ifnull('ending_date', F.lit('2099-12-31')),
 })
 
@@ -640,7 +649,9 @@ df_agreement_status_history = df_agreement_status_history.withColumns({
 
 
 
+
 #====== [MARKDOWN] CELL 14 ======
+
 #====== [START] CELL 15 ======
 
 df_membership = spark.read.table(K.TABLE('fct_fpa_nmu_ending_balance'))
@@ -656,7 +667,9 @@ df_book_limit = K.prefix(df_book_limit, 'book_limit')
 
 
 
+
 #====== [MARKDOWN] CELL 16 ======
+
 #====== [START] CELL 17 ======
 
 #
@@ -699,7 +712,9 @@ df_channel = K.prefix(df_channel, 'channel')
 
 
 
+
 #====== [MARKDOWN] CELL 18 ======
+
 #====== [START] CELL 19 ======
 
 df_budget = spark.read.table(K.TABLE('silver_uat_marketing_budget'))
@@ -731,7 +746,9 @@ df_budget_select = df_budget_channel.select(
 
 
 
+
 #====== [MARKDOWN] CELL 20 ======
+
 #====== [START] CELL 21 ======
 
 df_360_agreement = spark.read.table(K.TABLE('360_silver_agreement'))
@@ -779,7 +796,9 @@ df_360_agreement_360_package, df_membership_360_agreement = agreement_join_packa
 
 
 
+
 #====== [MARKDOWN] CELL 22 ======
+
 #====== [START] CELL 23 ======
 
 df_leads = spark.read.table(K.TABLE('silver_leads'))
@@ -840,7 +859,9 @@ df_leads_budget = df_leads_budget.withColumn(
 
 
 
+
 #====== [MARKDOWN] CELL 24 ======
+
 #====== [START] CELL 25 ======
 
 df_meetings = spark.read.table(K.TABLE('silver_meetings'))
@@ -880,7 +901,9 @@ df_meetings_location = df_meetings_lead.join(
 
 
 
+
 #====== [MARKDOWN] CELL 26 ======
+
 #====== [START] CELL 27 ======
 
 df_contact = spark.read.table(K.TABLE('silver_contact'))
@@ -953,7 +976,7 @@ df_contact_package_bll = df_contact_package_pst.join(
     'left'
 )
 
-# LEFT JOIN LATERAL previous_agreement
+# LEFT JOIN LATERAL previous_agreement 
 
 ## create id for per row join
 df_cpb = df_contact_package_bll.withColumn(
@@ -963,7 +986,7 @@ df_cpb = df_contact_package_bll.withColumn(
 df_contact_agreement_prev = df_cpb.join(
     df_membership_agreement,
     (df_membership.source_contact_id == df_360_agreement.source_contact_id)
-    & (df_360_agreement.prev_gap_reference <= df_membership.start_date)
+    & (df_360_agreement.prev_gap_reference <= df_membership.start_date) 
     & (df_360_agreement_package.is_membership == 1),
     'left'
 )
@@ -972,13 +995,13 @@ df_contact_agreement_prev = df_cpb.join(
 pa_window = Window.partitionBy('_partition_id').orderBy(df_360_agreement.order_date.desc())
 
 df_contact_agreement_prev_window = df_contact_agreement_prev.withColumn(
-    '_row',
+    '_row', 
     F.row_number().over(pa_window)
 ).filter(F.col('_row')==1).drop('_row')
 
 # outer - create day
 df_contact_outer = df_contact_agreement_prev_window.withColumn(
-    'day_gap',
+    'day_gap', 
     F.datediff(df_membership.signed_date, df_360_agreement.prev_gap_reference)
 )
 
@@ -987,7 +1010,7 @@ df_contact_outer = df_contact_outer.withColumn(
     'nmu_cat', K.NUM_CAT_WEHN(p=df_360_package.package_term_id, m=df_360_package.min_committed_month)
 ).withColumn(
     'package_gp', K.PACKAGE_GP_WHEN(
-        p=df_360_package.package_term_id, m=df_360_package.min_committed_month,
+        p=df_360_package.package_term_id, m=df_360_package.min_committed_month, 
         t=df_membership.total_session, s=df_360_package.service_category_id,
         u=df_book_limit.book_limit_unit_code_id, a=df_book_limit.book_limit_amount,
     )
@@ -999,13 +1022,12 @@ df_contact_outer = df_contact_outer.withColumn(
     )
 )
 
-
 # groupby count
 df_contact_ct = df_contact_outer.groupBy(
     F.to_date(df_membership.signed_date).alias('date'),
-    df_membership.source.alias('region'),
-    df_360_package.package_term_id,
-    df_package_sub_type.package_sub_type_code,
+    df_membership.source.alias('region'), 
+    df_360_package.package_term_id, 
+    df_package_sub_type.package_sub_type_code, 
     df_membership.dim_location_key,
     'nmu_cat', 'package_gp', 'is_all_clubs',
 ).agg(
@@ -1016,7 +1038,9 @@ df_contact_ct = df_contact_outer.groupBy(
 
 
 
+
 #====== [MARKDOWN] CELL 29 ======
+
 #====== [START] CELL 30 ======
 
 def prepare_item(df, id_cols, df_join, join_col):
@@ -1065,7 +1089,9 @@ df_campaign_item = prepare_item(
 
 
 
+
 #====== [MARKDOWN] CELL 31 ======
+
 #====== [START] CELL 32 ======
 
 df_contact_status_history = spark.read.table(K.TABLE('silver_contact_status_history'))
@@ -1076,8 +1102,8 @@ df_contact_status_history = df_contact_status_history.withColumn(
 
 #
 df_csh_filter = df_contact_status_history.filter(
-    F.col('contact_status_id').isin([1, 21, 25, 28, 33]) &
-    (F.col('source') == 'CN') &
+    F.col('contact_status_id').isin([1, 21, 25, 28, 33]) & 
+    (F.col('source') == 'CN') & 
     (F.col('active') == 1)
 )
 
@@ -1102,7 +1128,7 @@ df_csh_clcci = df_csh_filter.join(
     'left'
 )
 
-# create
+# create 
 df_csh_clcci = df_csh_clcci.withColumns({
     'lead_source_group': K.CN_SOURCE_GROUP_WHEN(),
     'market_lead': K.CN_MARKET_LEAD_WHEN(),
@@ -1133,7 +1159,9 @@ df_csh_clcci_budget = df_csh_clcci_budget.withColumn(
 
 
 
+
 #====== [MARKDOWN] CELL 33 ======
+
 #====== [START] CELL 34 ======
 
 df_invoice_detail = spark.read.table(K.TABLE('silver_invoice_detail'))
@@ -1154,7 +1182,9 @@ df_invoice_detail = K.prefix(df_invoice_detail, 'invoice')
 
 
 
+
 #====== [MARKDOWN] CELL 35 ======
+
 #====== [START] CELL 36 ======
 
 df_termination = spark.read.table(K.TABLE('termination'))
@@ -1167,16 +1197,18 @@ df_termination = K.prefix(df_termination, 'termination')
 
 
 
+
 #====== [MARKDOWN] CELL 37 ======
+
 #====== [START] CELL 38 ======
 
 def get_months(times:int=None):
     if times is None:
         times = 12 + date.today().month
-
+    
     return [
         F.add_months(
-            F.current_date(),
+            F.current_date(), 
             -_
         )
         for _ in range(times)
@@ -1189,12 +1221,12 @@ def set_current(df, current=None):
     df = df\
         .withColumn('current_date', current)\
         .withColumn(
-            'current_month',
+            'current_month', 
             F.date_trunc('month', 'current_date')
         )\
         .withColumn('current_month_last_day', F.last_day('current_month'))\
             .withColumn(
-                'is_effective_month',
+                'is_effective_month', 
                 F.col('current_month_last_day').between(F.col('effective_date'), F.col('max_ending_date'))
             )\
         .withColumn('next_month', F.add_months('current_month', 1))
@@ -1246,7 +1278,7 @@ def current_cmal_ash_window(df):
             F.ifnull(df_360_agreement.end_date, F.lit('2099-12-31'))
         )
 
-    #
+    # 
     expr1 = F.when(
         _adjusted_date(id=[2, 3, 7, 8, 9, 10]) >= df.current_month_last_day,  # <---
         0
@@ -1288,9 +1320,13 @@ def current_cmalash(df=df_agreement_status_history, current=None):
 
 
 
+
 #====== [MARKDOWN] CELL 39 ======
 
+
+
 #====== [MARKDOWN] CELL 40 ======
+
 #====== [START] CELL 41 ======
 
 # create layer
@@ -1304,7 +1340,7 @@ df_leads_layer = df_leads_layer.filter(
 # groupby
 df_leads_rpt = df_leads_layer.groupBy(
     df_leads.date,
-    df_leads.region_is_hk.alias('region'),
+    df_leads.region_is_hk.alias('region'), 
     df_dim_location.dim_location_key,
 
     df_leads.marketing_campaign.alias('campaign'),
@@ -1314,7 +1350,7 @@ df_leads_rpt = df_leads_layer.groupBy(
     df_leads.lead_source,
 
     df_user.user_name,
-
+    
 ).agg(
     F.count('*').alias('count'),
     F.sum('per_budget_amount').alias('budget')
@@ -1322,7 +1358,7 @@ df_leads_rpt = df_leads_layer.groupBy(
 
 df_leads_rpt = df_leads_rpt.withColumn('layer', K.NO_LAYER_RENAME('LD'))
 
-# HK
+# HK 
 df_leads_rpt = df_leads_rpt.filter(
     F.col('region').isin(['HK', 'SG'])
 )
@@ -1333,7 +1369,9 @@ df_leads_rpt = df_leads_rpt.filter(
 
 
 
+
 #====== [MARKDOWN] CELL 42 ======
+
 #====== [START] CELL 43 ======
 
 account_cols = [
@@ -1373,7 +1411,9 @@ df_leads_nmu_window = df_leads_nmu.withColumn(
 
 
 
+
 #====== [MARKDOWN] CELL 44 ======
+
 #====== [START] CELL 45 ======
 
 # group by
@@ -1398,7 +1438,7 @@ df_leads_nmu_rpt = df_leads_nmu_rpt\
 
 df_leads_nmu_rpt = df_leads_nmu_rpt.withColumn('layer', K.NO_LAYER_RENAME('NMUCH'))
 
-# HK
+# HK 
 df_leads_nmu_rpt = df_leads_nmu_rpt.filter(
     F.col('region').isin(['HK', 'SG'])
 )
@@ -1409,7 +1449,9 @@ df_leads_nmu_rpt = df_leads_nmu_rpt.filter(
 
 
 
+
 #====== [MARKDOWN] CELL 46 ======
+
 #====== [START] CELL 47 ======
 
 # group by
@@ -1421,7 +1463,7 @@ df_leads_nmu_rpt = df_leads_nmu_window.groupBy(
 
     df_leads.lead_source,
     'group',
-
+    
     df_user.user_name,
 ).agg(
     F.countDistinct('account_id').alias('count'),
@@ -1445,7 +1487,7 @@ df_leads_nmu_rpt = df_leads_nmu_rpt\
 
 df_leads_nmu_rpt = df_leads_nmu_rpt.withColumn('layer', K.NO_LAYER_RENAME('NMUCH'))
 
-# HK
+# HK 
 df_leads_nmu_rpt = df_leads_nmu_rpt.filter(
     F.col('region').isin(['HK', 'SG'])
 )
@@ -1456,7 +1498,9 @@ K.write_table(df_leads_nmu_rpt, table='rpt_kpi_nmu_channel_by')
 
 
 
+
 #====== [MARKDOWN] CELL 48 ======
+
 #====== [START] CELL 49 ======
 
 # group by
@@ -1471,7 +1515,7 @@ df_leads_nmu_rpt = df_leads_nmu_window.groupBy(
 
     # df_leads.member_num,
     df_leads.ref_id,
-
+        
     df_user.user_name,
 ).agg(
     F.countDistinct('account_id').alias('count'),
@@ -1497,7 +1541,7 @@ df_leads_nmu_rpt = df_leads_nmu_rpt\
 
 df_leads_nmu_rpt = df_leads_nmu_rpt.withColumn('layer', K.NO_LAYER_RENAME('NMUCH'))
 
-# HK
+# HK 
 df_leads_nmu_rpt = df_leads_nmu_rpt.filter(
     F.col('region').isin(['HK', 'SG'])
 )
@@ -1508,7 +1552,9 @@ K.write_table(df_leads_nmu_rpt, table='rpt_kpi_nmu_channel_mem')
 
 
 
+
 #====== [MARKDOWN] CELL 50 ======
+
 #====== [START] CELL 51 ======
 
 # filter for booking
@@ -1534,7 +1580,7 @@ df_meeting_booking = df_meeting_booking.groupBy(
 
 df_meeting_booking = df_meeting_booking.withColumn('layer', K.NO_LAYER_RENAME('BK'))
 
-# HK
+# HK 
 df_meeting_booking = df_meeting_booking.filter(
     F.col('region').isin(['HK', 'SG'])
 )
@@ -1545,7 +1591,9 @@ df_meeting_booking = df_meeting_booking.filter(
 
 
 
+
 #====== [MARKDOWN] CELL 52 ======
+
 #====== [START] CELL 53 ======
 
 # filter for booking
@@ -1573,7 +1621,7 @@ df_meeting_show = df_meeting_show.groupBy(
 
 df_meeting_show = df_meeting_show.withColumn('layer', K.NO_LAYER_RENAME('SW'))
 
-# HK
+# HK 
 df_meeting_show = df_meeting_show.filter(
     F.col('region').isin(['HK', 'SG'])
 )
@@ -1584,7 +1632,9 @@ df_meeting_show = df_meeting_show.filter(
 
 
 
+
 #====== [MARKDOWN] CELL 54 ======
+
 #====== [START] CELL 55 ======
 
 # create new layer
@@ -1613,7 +1663,7 @@ df_meeting_guest = df_meeting_guest.groupBy(
     F.count('*').alias('count'),
 )
 
-# HK
+# HK 
 df_meeting_guest = df_meeting_guest.filter(
     F.col('region').isin(['HK', 'SG'])
 )
@@ -1624,7 +1674,9 @@ df_meeting_guest = df_meeting_guest.filter(
 
 
 
+
 #====== [MARKDOWN] CELL 56 ======
+
 #====== [START] CELL 57 ======
 
 def cn_lead_groupby(
@@ -1703,7 +1755,9 @@ K.write_table(df_guest_cn, table='rpt_kpi_guest', mode='append')
 
 
 
+
 #====== [MARKDOWN] CELL 59 ======
+
 #====== [START] CELL 60 ======
 
 # create layer
@@ -1736,7 +1790,9 @@ K.write_table(df_nmuc, table='rpt_kpi_nmu')
 
 
 
+
 #====== [MARKDOWN] CELL 61 ======
+
 #====== [START] CELL 62 ======
 
 # inner join 360 agreement
@@ -1880,22 +1936,21 @@ for _i, _m in enumerate(get_months()):
 
 
 
+
 #====== [MARKDOWN] CELL 63 ======
+
 #====== [START] CELL 64 ======
 df_renew_upgrade = spark.read.table(K.TABLE('fct_fpa_renew_upgrade'))
 
 df_renew_upgrade = df_renew_upgrade.withColumn(
     'date', F.to_date('signed_date')
 )
-
 df_renew_upgrade = df_renew_upgrade.withColumn(
     'region', F.left('dim_location_key', F.lit(2))
 )
-
 df_renew_upgrade = df_renew_upgrade.withColumnRenamed(
     'renewal_upgrade','layer'
 )
-
 df_renew_upgrade = df_renew_upgrade.drop('signed_date')
 
 # general filter + last group
@@ -1916,82 +1971,68 @@ K.write_table(df_agreement_ct, table='rpt_kpi_renew_upgrade')
 
 
 
+
 #====== [MARKDOWN] CELL 65 ======
+
 #====== [START] CELL 66 ======
 
-# loop for snapshot
-for _i, _m in enumerate(get_months(1)):
+df_termination = spark.read.table(K.TABLE('termination'))
+df_silver_contact = spark.read.table(K.TABLE('silver_contact'))
+df_360f_location = spark.read.table(K.TABLE('dim_location_360f'))
+df_termination = df_termination.withColumns({
+    "month": F.date_format(F.col("date"), "yyyy-MM"),
+    "region_rssid": K.concat_id(df_termination, cols=['region', 'rssid']),
+})
+df_silver_contact = df_silver_contact.withColumns({
+    "source_member": K.concat_id(df_silver_contact, cols=['source', 'member_id']),
+    "source_location": K.concat_id(df_silver_contact, cols=['source', 'home_location_id']),
+})
+df_silver_contact = df_silver_contact.withColumnRenamed("source", "sector")
+df_silver_contact = df_silver_contact.dropDuplicates(["source_member"])
 
-    df_tr = current_cmalash(current=_m)
-
-    # filter
-    df_tr_filter = df_tr.filter(
-        (df_tr.adjusted_date_row == 1) &
-        (
-            df_agreement_status_history.agreement_status_id.isin([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]) |
-            (
-                df_agreement_status_history.agreement_status_id.isNull() &
-                (F.ifnull(df_360_agreement.prev_gap_reference, F.lit('2099-12-31')) >= df_tr.current_month_last_day) & # <---
-                (F.least(df_360_agreement.start_date, df_360_agreement.signed_date) < df_tr.current_month_last_day) # <---
-            )
-        )
-    )
-
-    #
-    df_tr_select = df_tr_filter.select(
-        df_contact.id, #contact_id
-        df_contact.source,
-
-        df_contact.source_id,
-
-        df_360_agreement.source_contact_id,
-        df_360_agreement.prev_gap_reference, #end_date
-        df_360_agreement.signed_date,
-
-        df_360_package.package_term_id,
-        df_360_package.package_sub_type_id,
-        df_360_package.min_committed_month,
-
-        df_agreement_status_history.agreement_status_id,
-
-        df_location_full.dim_location_key,
-    )
-
-    # self inner join contact
-    df_base_contact = df_contact.select('source_id', 'source_member_id')
-
-    df_tr_contact = df_tr_select.join(
-        df_base_contact,
-        df_base_contact.source_id == df_360_agreement.source_contact_id,
-        'inner'
-    )
-
-    #
-    df_tr_termination = df_termination.join(
-        df_tr_contact,
-        df_contact.source_member_id == df_termination.termination_region_rssid,
+df_termination_location = (
+    df_termination.join(
+        df_silver_contact,
+        df_termination.region_rssid == df_silver_contact.source_member,
         'left'
     )
+    .join(
+        df_360f_location,
+        df_silver_contact.source_location == df_360f_location.dim_location_360f_key,
+        'left'
+    )
+)
+# display(df_termination_location)
 
-    df_tr_layer = df_tr_termination.withColumn(
-        'layer', K.TERMINATION_REQUEST_WHEN(),
+for _i, _m in enumerate(get_months(1)):
+    window = Window.partitionBy("rssid", "region", "month").orderBy(F.col("date").asc())
+    df_ranked = df_termination_location.withColumn("row_num", F.row_number().over(window))
+    # Split by row_num condition
+    df_valid = df_ranked.filter(
+        (F.col("row_num") == 1) & (F.col("member_id").isNotNull())
+    )
+    df_invalid = df_ranked.filter(
+        ~((F.col("row_num") == 1) & (F.col("member_id").isNotNull()))
     )
 
-    df_tr_layer = K.GENERAL_LAYER_FILTER(df_tr_layer, 'KPI_TRD_TRD_TRD')
+    # Apply your custom layer filters
+    df_valid = df_valid.withColumn('layer', F.lit('KPI_TRD_TRD_VALID'))
+    df_invalid = df_invalid.withColumn('layer', F.lit('KPI_TRD_TRD_INVALID'))
+
+    # Combine both results back (optional)
+    df_tr_layer = df_valid.unionByName(df_invalid)
 
     # groupby
     df_tr_ct = df_tr_layer.groupBy(
-        F.col('termination_date').alias('date'),
-        F.col('source').alias('region'),
-        df_location_full.dim_location_key,
+        F.col('date'), 
+        F.col('region'),
+        F.col('dim_location_key'),
         'layer',
-        # 'package_sub_type_id'
     ).agg(
         F.count('*').alias('count')
     )
-
-    # # create snapshot date -- only latest version
-    # df_tr_ct = df_tr_ct.withColumn('snapshot_date', _m)
+    display(df_tr_ct)
+    
 
     _mode = 'overwrite' if _i == 0 else 'append'
     K.write_table(df_tr_ct, table='rpt_kpi_termination_requests', mode=_mode)
@@ -1999,9 +2040,94 @@ for _i, _m in enumerate(get_months(1)):
 #====== [END] CELL 66 ======
 
 
+#====== [START] CELL 67 ======
 
-#====== [MARKDOWN] CELL 67 ======
-#====== [START] CELL 68 ======
+# # loop for snapshot
+# for _i, _m in enumerate(get_months(1)):
+
+#     df_tr = current_cmalash(current=_m)
+
+#     # filter
+#     df_tr_filter = df_tr.filter(
+#         (df_tr.adjusted_date_row == 1) &
+#         (
+#             df_agreement_status_history.agreement_status_id.isin([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]) |
+#             (
+#                 df_agreement_status_history.agreement_status_id.isNull() &
+#                 (F.ifnull(df_360_agreement.prev_gap_reference, F.lit('2099-12-31')) >= df_tr.current_month_last_day) & # <---
+#                 (F.least(df_360_agreement.start_date, df_360_agreement.signed_date) < df_tr.current_month_last_day) # <---
+#             )
+#         )
+#     )
+
+#     #
+#     df_tr_select = df_tr_filter.select(
+#         df_contact.id, #contact_id
+#         df_contact.source,
+
+#         df_contact.source_id,
+
+#         df_360_agreement.source_contact_id,
+#         df_360_agreement.prev_gap_reference, #end_date
+#         df_360_agreement.signed_date,
+
+#         df_360_package.package_term_id,
+#         df_360_package.package_sub_type_id,
+#         df_360_package.min_committed_month,
+
+#         df_agreement_status_history.agreement_status_id,
+        
+#         df_location_full.dim_location_key,
+#     )
+
+#     # self inner join contact
+#     df_base_contact = df_contact.select('source_id', 'source_member_id')
+
+#     df_tr_contact = df_tr_select.join(
+#         df_base_contact,
+#         df_base_contact.source_id == df_360_agreement.source_contact_id,
+#         'inner'
+#     )
+
+#     # 
+#     df_tr_termination = df_termination.join(
+#         df_tr_contact,
+#         df_contact.source_member_id == df_termination.termination_region_rssid,
+#         'left'
+#     )
+
+#     df_tr_layer = df_tr_termination.withColumn(
+#         'layer', K.TERMINATION_REQUEST_WHEN(),
+#     )
+
+#     df_tr_layer = K.GENERAL_LAYER_FILTER(df_tr_layer, 'KPI_TRD_TRD_TRD')
+
+#     # groupby
+#     df_tr_ct = df_tr_layer.groupBy(
+#         F.col('termination_date').alias('date'), 
+#         F.col('source').alias('region'),
+#         df_location_full.dim_location_key,
+#         'layer',
+#         # 'package_sub_type_id'
+#     ).agg(
+#         F.count('*').alias('count')
+#     )
+
+#     # # create snapshot date -- only latest version
+#     # df_tr_ct = df_tr_ct.withColumn('snapshot_date', _m)
+
+#     _mode = 'overwrite' if _i == 0 else 'append'
+#     K.write_table(df_tr_ct, table='rpt_kpi_termination_requests', mode=_mode)
+
+#====== [END] CELL 67 ======
+
+
+
+
+#====== [MARKDOWN] CELL 68 ======
+
+#====== [START] CELL 69 ======
+
 df_lead_account = spark.read.table(K.TABLE('silver_vw_lead_account_modal_2023'))
 
 # fct_sf_accounts
@@ -2016,12 +2142,12 @@ df_lead_account = df_lead_account.withColumns({
 # success account
 ## filter
 df_lead_account_success = df_lead_account.filter(
-    F.col('success_date').isNotNull() &
+    F.col('success_date').isNotNull() & 
     (F.col('guest_status') == 'Success')
 )
 
 ## window
-### get first account
+### get first account 
 _window = Window.partitionBy('account_id').orderBy('success_date')
 df_lead_account_success = df_lead_account_success.withColumn(
     '_row', F.row_number().over(_window)
@@ -2030,6 +2156,11 @@ df_lead_account_success = df_lead_account_success.withColumn(
     .select(
         'region_account_id', F.date_format('success_date', K.MONTH_DATE_FORMAT).alias('success_month')
     )
+
+#====== [END] CELL 69 ======
+
+
+#====== [START] CELL 70 ======
 
 NMU_ENDING_BALANCE_GROUP = [
     'date',
@@ -2070,7 +2201,7 @@ for _i, _m in enumerate(get_months()):
 
     # create is_success_month
     df_nmu_eb = df_nmu_eb.withColumn(
-        'is_success_month',
+        'is_success_month', 
         df_lead_account_success.success_month.isNotNull() &
         (df_lead_account_success.success_month == F.date_format(_m, K.MONTH_DATE_FORMAT))
     )
@@ -2081,11 +2212,11 @@ for _i, _m in enumerate(get_months()):
         df = set_current(df, _m)
 
         # filter
-        filter_col = F.col('current_date') if is_current else F.col('current_month_last_day')
+        filter_col = F.col('current_date') if is_current else F.col('current_month_last_day') 
         df = df.filter(
             df_nmu_eb.signed_date <= filter_col
         )
-
+        
 
         # select
         df = df.select(
@@ -2128,10 +2259,10 @@ for _i, _m in enumerate(get_months()):
     if _i in [0, 1, 12]: # MoM
         _append(df_nmu_eb, is_current=True)
 
-#====== [END] CELL 68 ======
+#====== [END] CELL 70 ======
 
 
-#====== [START] CELL 69 ======
+#====== [START] CELL 71 ======
 
 # NMU_ENDING_BALANCE_GROUP = [
 #     'date',
@@ -2164,7 +2295,7 @@ for _i, _m in enumerate(get_months()):
 #     df_nmu_eb = df_nmu_eb.filter(
 #         # (df_nmu_eb.adjusted_date_row == 1) &
 #         (
-#             ~df_agreement_status_history.agreement_status_id.isin([2, 3, 4, 7]) |
+#             ~df_agreement_status_history.agreement_status_id.isin([2, 3, 4, 7]) | 
 #             df_agreement_status_history.remark.like('Suspend - Frozen%') |
 #             (
 #                 df_agreement_status_history.agreement_status_id.isNull() &
@@ -2176,7 +2307,7 @@ for _i, _m in enumerate(get_months()):
 
 #     # create is_success_month
 #     df_nmu_eb = df_nmu_eb.withColumn(
-#         'is_success_month',
+#         'is_success_month', 
 #         df_account_success.success_month.isNotNull() &
 #         # df_360_agreement.signed_month.isNotNull() &
 
@@ -2214,9 +2345,9 @@ for _i, _m in enumerate(get_months()):
 
 #             # 'is_success_month',
 
-#             # new
+#             # new 
 #             df_nmu_eb.adjusted_date_row,
-#         )
+#         ) 
 
 #         # create flag
 #         df = df.withColumn('is_current_date', F.lit(is_current))
@@ -2244,12 +2375,14 @@ for _i, _m in enumerate(get_months()):
 #     # if _i in [0, 1, 12]: # MoM
 #     #     _append(df_nmu_eb, is_current=True)
 
-#====== [END] CELL 69 ======
+#====== [END] CELL 71 ======
 
 
 
-#====== [MARKDOWN] CELL 70 ======
-#====== [START] CELL 71 ======
+
+#====== [MARKDOWN] CELL 72 ======
+
+#====== [START] CELL 73 ======
 
 # Direct Gold Table Call
 df_checkin = spark.read.table(K.TABLE('fct_fpa_check_in'))
@@ -2272,12 +2405,81 @@ df_checkin_layer = df_checkin_when.groupBy(
 
 K.write_table(df_checkin_layer, table='rpt_kpi_checkin')
 
-#====== [END] CELL 71 ======
+#====== [END] CELL 73 ======
+
+
+#====== [START] CELL 74 ======
+
+# df_checkin = spark.read.table(K.TABLE('silver_check_in'))
+
+# time_scale = 1000
+# df_checkin = df_checkin.withColumns({
+#     'dim_location_key': K.concat_id(df_checkin, cols=['source', 'location_id']),
+#     'source_client_service_id': K.concat_id(df_checkin, cols=['source', 'client_service_id']),
+
+#     'check_in_utc': F.from_unixtime(F.col('check_in_time') / time_scale),
+# }).withColumn(
+#     'check_in_datetime', F.from_utc_timestamp('check_in_utc', 'Asia/Hong_Kong')
+# ).withColumn(
+#     'check_in_date', F.to_date('check_in_datetime'),
+# ).withColumns({
+#     'check_in_year': F.year('check_in_date'),
+#     'check_in_month': F.month('check_in_date'),
+#     'check_in_day': F.day('check_in_date'),
+# })
+
+# df_checkin_3a = df_checkin.join(
+#     df_360_agreement,
+#     df_checkin.source_client_service_id == df_360_agreement.source_ext_ref_agreement_id,
+#     'left'
+# )
+
+# # group by daily
+# df_checkin_ct = df_checkin_3a.groupby(
+#     'dim_location_key',
+#     F.substring('dim_location_key', 0, 2).alias('region'), 
+
+#     F.col('check_in_date').alias('date'),
+#     df_360_agreement.package_type_id
+# ).agg(
+#     F.count_distinct('client_id').alias('count')
+# )
+
+# # # window
+# # _order_window = Window.partitionBy('dim_location_key', 'check_in_year', 'check_in_month').orderBy('check_in_date')
+# # df_checkin_sum = df_checkin_ct.withColumn(
+# #     '_order', F.row_number().over(_order_window)
+# # )
+
+# # _window = Window.partitionBy('dim_location_key', 'check_in_year', 'check_in_month').orderBy('_order')
+# # df_checkin_sum = df_checkin_sum.withColumn(
+# #     'avg_mtd', F.sum('n').over(_window) / F.col('check_in_day')
+# # )
+
+# # layer
+# df_checkin_when = df_checkin_ct.withColumn(
+#     'layer', K.CHECK_IN_WHEN()
+# )
+
+# df_checkin_layer = df_checkin_when.groupBy(
+#     'dim_location_key',
+#     'region', 
+#     'date',
+#     'layer',
+# ).agg(
+#     F.sum('count').alias('count')
+# )
+
+# K.write_table(df_checkin_layer, table='rpt_kpi_checkin')
+
+#====== [END] CELL 74 ======
 
 
 
-#====== [MARKDOWN] CELL 72 ======
-#====== [START] CELL 73 ======
+
+#====== [MARKDOWN] CELL 75 ======
+
+#====== [START] CELL 76 ======
 
 def current_suspension(df=df_agreement_status_history, current=None):
     df_ash_current = set_current(df, current=current)
@@ -2332,7 +2534,7 @@ def current_suspension(df=df_agreement_status_history, current=None):
     df_suspension_ct = df_suspension_filter.groupBy(
         F.to_date(df_agreement_status_history.effective_date).alias('date'),
         df_location_full.dim_location_key,
-        region_col.alias('region'),
+        region_col.alias('region'), 
         F.lit('KPI_SUS_SUS_SUS').alias('layer'),
         # df_package.package_term_id,
         # df_package.package_sub_type_id,
@@ -2349,12 +2551,14 @@ def current_suspension(df=df_agreement_status_history, current=None):
 for _i, _m in enumerate(get_months(1)):
     current_suspension(current=_m)
 
-#====== [END] CELL 73 ======
+#====== [END] CELL 76 ======
 
 
 
-#====== [MARKDOWN] CELL 74 ======
-#====== [START] CELL 75 ======
+
+#====== [MARKDOWN] CELL 77 ======
+
+#====== [START] CELL 78 ======
 
 import datetime
 import calendar
@@ -2369,14 +2573,14 @@ def date_list():
     today = datetime.date.today()
     _, last_day = calendar.monthrange(today.year, today.month)
     end_date = datetime.date(today.year, today.month, last_day)
-
+    
     # Generate list of dates
     date_list = []
     current = start_date
     while current <= end_date:
         date_list.append((current,))
         current += datetime.timedelta(days=1)
-
+        
     return date_list
 
 df_exchange_base = spark.createDataFrame(date_list(), schema=['date'])
@@ -2392,16 +2596,16 @@ df_exchange_base = df_exchange_base.filter(
     F.col('basesymbol') != F.col('transactionsymbol')
 )
 
-#====== [END] CELL 75 ======
+#====== [END] CELL 78 ======
 
 
-#====== [START] CELL 76 ======
+#====== [START] CELL 79 ======
 
 df_exchange = spark.read.table(K.TABLE('silver_exchange_rate'))
 
 # filter
 df_exchange = df_exchange.filter(
-    F.col('basesymbol').isin(basesymbol_list) &
+    F.col('basesymbol').isin(basesymbol_list) & 
     F.col('transactionsymbol').isin(transactionsymbol_list)
 )
 
@@ -2432,28 +2636,32 @@ df_exchange_lag = df_exchange_lag.filter(
 )
 
 df_exchange_select = df_exchange_lag.select(
-    'date', 'basesymbol', 'transactionsymbol', 'rate',
+    'date', 'basesymbol', 'transactionsymbol', 'rate', 
     F.substring('basesymbol', 0, 2).alias('region')
 )
 
 df_exchange_select.write.mode('overwrite').saveAsTable(K.REPORT_TABLE('rpt_exchange_rate'))
 
-#====== [END] CELL 76 ======
+#====== [END] CELL 79 ======
 
 
 
-#====== [MARKDOWN] CELL 77 ======
-#====== [START] CELL 78 ======
+
+#====== [MARKDOWN] CELL 80 ======
+
+#====== [START] CELL 81 ======
 
 df_campaign.write.mode('overwrite').option('overwriteSchema', 'True').saveAsTable(K.REPORT_TABLE('rpt_campaign'))
 df_channel.write.mode('overwrite').option('overwriteSchema', 'True').saveAsTable(K.REPORT_TABLE('rpt_channel'))
 
-#====== [END] CELL 78 ======
+#====== [END] CELL 81 ======
 
 
 
-#====== [MARKDOWN] CELL 79 ======
-#====== [START] CELL 80 ======
+
+#====== [MARKDOWN] CELL 82 ======
+
+#====== [START] CELL 83 ======
 
 spark.read.table(K.TABLE('dim_location')).withColumn(
     'is_hk', K.IS_HK_WHEN(
@@ -2461,26 +2669,28 @@ spark.read.table(K.TABLE('dim_location')).withColumn(
     )
 ).write.mode('overwrite').option('overwriteSchema', 'True').saveAsTable(K.REPORT_TABLE('rpt_dim_location'))
 
-#====== [END] CELL 80 ======
+#====== [END] CELL 83 ======
 
 
 
-#====== [MARKDOWN] CELL 81 ======
-#====== [START] CELL 82 ======
+
+#====== [MARKDOWN] CELL 84 ======
+
+#====== [START] CELL 85 ======
 
 spark.read.table(K.TABLE('silver_lead_source_type'))\
     .write.mode('overwrite').option('overwriteSchema', 'True').saveAsTable(K.REPORT_TABLE('rpt_lead_source_type'))
 
-#====== [END] CELL 82 ======
+#====== [END] CELL 85 ======
 
 
-#====== [START] CELL 83 ======
+#====== [START] CELL 86 ======
 
 spark.read.table(K.TABLE('silver_users')).select(
     # F.col('id').alias('user_id'),
     'user_name',
 ).dropDuplicates().write.mode('overwrite').option('overwriteSchema', 'True').saveAsTable(K.REPORT_TABLE('rpt_users'))
 
-#====== [END] CELL 83 ======
+#====== [END] CELL 86 ======
 
 

@@ -154,7 +154,7 @@ silver_accounts = (
 )
 
 silver_contact = silver_contact.select(
-    'bk',
+    'bk', 
     'source',
     'id',
     'ext_ref_contact_id',
@@ -168,8 +168,8 @@ silver_contact = silver_contact.select(
 accounts_nmu_ym = (
     silver_contact.alias('contact')
     .join(
-        silver_accounts.alias('accounts'),
-        F.concat(F.col('accounts.region'), F.col('accounts.ref_id')) == F.concat(F.col('contact.source'), F.col('contact.ext_ref_contact_id')),
+        silver_accounts.alias('accounts'), 
+        F.concat(F.col('accounts.region'), F.col('accounts.ref_id')) == F.concat(F.col('contact.source'), F.col('contact.ext_ref_contact_id')), 
         'left'
     )
     .select(
@@ -222,7 +222,7 @@ silver_service = spark.read.table(TABLE('silver_service'))
 
 #====== [START] CELL 15 ======
 
-# 1. Create membership_agreement
+# 1. Create membership_agreement 
 membership_agreement = (
     silver_agreement.alias('a')
     .filter(F.col('a.deleted_at').isNull() & F.col('a.parent_agreement_id').isNull())
@@ -235,15 +235,15 @@ membership_agreement = (
         'a.*',
         F.col('p.source').alias('p_source'),
         F.when(
-            (F.col('a.source') == 'HK') &
-            (F.col('a.package_type_id') == 1) &
+            (F.col('a.source') == 'HK') & 
+            (F.col('a.package_type_id') == 1) & 
             (F.col('p.package_sub_type_id').isin(8, 9)), 1
         ).when(
-            (F.col('a.source') == 'SG') &
-            (F.col('a.package_type_id') == 1) &
+            (F.col('a.source') == 'SG') & 
+            (F.col('a.package_type_id') == 1) & 
             (F.col('p.package_sub_type_id').isin(1, 2)), 1
         ).when(
-            (F.col('a.source') == 'CN') &
+            (F.col('a.source') == 'CN') & 
             (F.col('a.package_type_id') == 1), 1
         ).otherwise(0).alias('is_membership')
     )
@@ -254,7 +254,7 @@ membership_agreement = (
 
 #====== [START] CELL 16 ======
 
-# 2. Create previous_agreement
+# 2. Create previous_agreement 
 previous_agreement = (
     membership_agreement
     .filter(F.col('deleted_at').isNull() & (F.col('is_membership') == 1))
@@ -278,7 +278,7 @@ previous_agreement = (
 
 #====== [START] CELL 17 ======
 
-# 3. Create first_agreement
+# 3. Create first_agreement  
 # first_agreement_window = Window.partitionBy(F.concat(F.col('source'), F.col('contact_id'))).orderBy(F.coalesce('signed_date', 'start_date'))
 # first_agreement_window = Window.partitionBy('source', 'contact_id').orderBy(F.coalesce('signed_date', 'start_date'))
 first_agreement_window = Window.partitionBy('source', 'contact_id').orderBy('start_date', F.col('id').cast('bigint'))
@@ -286,9 +286,9 @@ first_agreement_window = Window.partitionBy('source', 'contact_id').orderBy('sta
 first_agreement_df = (
     membership_agreement
     .filter(
-        F.col('deleted_at').isNull() &
-        (F.col('package_type_id') == 1) &
-        F.col('parent_agreement_id').isNull() &
+        F.col('deleted_at').isNull() & 
+        (F.col('package_type_id') == 1) & 
+        F.col('parent_agreement_id').isNull() & 
         (F.col('is_membership') == 1)
     )
     .withColumn('row_num', F.row_number().over(first_agreement_window))
@@ -302,9 +302,9 @@ first_agreement_df = (
 #====== [START] CELL 18 ======
 
 # membership_agreement.filter(
-#                         F.col('deleted_at').isNull() &
-#                         (F.col('package_type_id') == 1) &
-#                         F.col('parent_agreement_id').isNull() &
+#                         F.col('deleted_at').isNull() & 
+#                         (F.col('package_type_id') == 1) & 
+#                         F.col('parent_agreement_id').isNull() & 
 #                         (F.col('is_membership') == 1)
 #                     ).withColumn('row_num', F.row_number().over(first_agreement_window)
 #                     ).filter(F.col("contact_id").isin(["262987"])).display()
@@ -324,7 +324,7 @@ prev_agreement_df = (
     .join(
         previous_agreement.alias('pa'),
         (F.concat(F.col('ma.source'), F.col('ma.contact_id').cast('bigint')) == F.concat(F.col('pa.source'), F.col('pa.contact_id').cast('bigint'))) &
-        (F.col('pa.prev_gap_reference') < F.col('ma.start_date')),
+        (F.col('pa.prev_gap_reference') < F.col('ma.start_date')), 
         'left'
     )
     .withColumn('row_num', F.row_number().over(prev_agreement_window))
@@ -352,7 +352,7 @@ prev_agreement_df = (
 
 #====== [START] CELL 20 ======
 
-# 5. Joining
+# 5. Joining 
 join_agreement = (
     membership_agreement.alias('agreement')
     .join(
@@ -382,7 +382,7 @@ join_agreement = (
     )
     .join(
         silver_agreement_status.alias('agreement_status'),
-        (F.col('agreement.source') == F.col('agreement_status.source')) &
+        (F.col('agreement.source') == F.col('agreement_status.source')) & 
         (F.col('agreement.agreement_status_id') == F.col('agreement_status.id')),
         'left'
     )
@@ -441,11 +441,11 @@ fct_agreement = join_agreement.select(
     F.concat(F.col("agreement.source"), F.col("agreement.contact_id")).cast("string").alias("dim_contact_key"),
     F.concat(F.col("agreement.source"), F.col("agreement.revenue_location_id")).cast("string").alias("dim_revenue_location_key"),
     F.from_utc_timestamp(
-        F.from_unixtime(F.col("agreement.created_at") / 1000),
+        F.from_unixtime(F.col("agreement.created_at") / 1000), 
         "Asia/Shanghai"
     ).cast("timestamp").alias("agreement_start_date"),
     F.date_format(
-        F.from_utc_timestamp(F.from_unixtime(F.col("agreement.created_at") / 1000), "Asia/Shanghai"),
+        F.from_utc_timestamp(F.from_unixtime(F.col("agreement.created_at") / 1000), "Asia/Shanghai"), 
         "yyyyMMdd"
     ).cast("string").alias("agreement_start_date_key"),
     F.col("agreement.agreement_no").cast("string").alias("agreement_no"),
@@ -530,8 +530,8 @@ fct_agreement = join_agreement.select(
         "Rejoin prepaid to prepaid renew"
     ).otherwise("Unknown").cast("string").alias("agreement_status_group")
 ).orderBy(
-    'dim_contact_key',
-    'agreement.start_date',
+    'dim_contact_key', 
+    'agreement.start_date', 
     'agreement.signed_date'
 )
 
@@ -627,70 +627,70 @@ reverse_invoice_df = (
 #====== [START] CELL 25 ======
 
 join_membership_sales = (
-    fct_agreement.alias("a")
+    fct_agreement.alias("a") 
     .join(
         silver_invoice_detail.alias("e"),
         (F.concat(F.col("e.source"), F.col("e.item_id").cast("bigint")) == F.col("a.fct_agreement_key")) &
         (F.col("e.item_type") == "agreement") &
         (F.col("e.active") == 1),              # updated on 2025.08.21. Added
         "inner"
-    )
+    ) 
     .join(
         silver_invoice_header.alias("ih"),
         (F.concat(F.col("e.source"), F.col("e.invoice_header_id").cast("bigint")) == F.concat(F.col("ih.source"), F.col("ih.id").cast("bigint"))) &
         (F.col("e.active") == 1),              # updated on 2025.08.21. Added
         "left"
-    )
+    ) 
     .join(
         silver_invoice_category.alias("ic"),
         F.concat(F.col("e.source"), F.col("e.invoice_category_id").cast("bigint")) == F.concat(F.col("ic.source"), F.col("ic.id").cast("bigint")),
         "left"
-    )
+    ) 
     .join(
         silver_package.alias("b"),
         F.col("a.dim_package_key") == F.col("b.bk"),
         "left"
-    )
+    ) 
     .join(
         silver_package_sub_type.alias("pst"),
         F.concat(F.col("b.source"), F.col("b.package_sub_type_id").cast("bigint")) == F.col("pst.bk"),
         "left"
-    )
+    ) 
     .join(
         silver_package_book_limit_line.alias("c"),
         F.col("a.package_id") == F.col("c.package_id"),
         "left"
-    )
+    ) 
     .join(
         silver_location.alias("f"),
         F.col("a.dim_revenue_location_key") == F.col("f.bk"),
         "left"
-    )
+    ) 
     .join(
         dim_location_360f.alias("loc_f"),
         F.col("loc_f.dim_location_360f_key") == F.col("f.bk"),
         "left"
-    )
+    ) 
     .join(
         fct_agreement.alias("upgrade_agt"),
         F.col("upgrade_agt.fct_agreement_key") == F.col("a.from_agreement_key"),
         "left"
-    )
+    ) 
     .join(
         fct_agreement.alias("prev_agt"),
         F.col("prev_agt.fct_agreement_key") == F.col("a.prev_agreement_key"),
         "left"
-    )
+    ) 
     .join(
         silver_package_sub_type.alias("prev_agt_pst"),
         F.concat(F.col("prev_agt.source"), F.col("prev_agt.package_sub_type_id").cast("bigint")) == F.col("prev_agt_pst.bk"),
         "left"
-    )
+    ) 
     .join(
         prev_agt_invoice_df.alias("prev_agt_invoice"),
         F.concat(F.col("prev_agt_invoice.source"), F.col("prev_agt_invoice.item_id").cast("bigint")) == F.col("a.prev_agreement_key"),
         "left"
-    )
+    ) 
     .join(
         upgrade_agt_invoice_df.alias("upgrade_agt_invoice"),
         F.concat(F.col("upgrade_agt_invoice.source"), F.col("upgrade_agt_invoice.item_id").cast("bigint")) == F.col("a.prev_agreement_key"),
@@ -756,97 +756,97 @@ fct_membership_sales = join_membership_sales.select(
     F.col("e.amount").cast("decimal(18,4)").alias("invoice_detail_amount"),
     F.col("e.invoice_category_id").cast("long").alias("invoice_category_id"),
     F.col("ic.name").cast("string").alias("invoice_category_name"),
-
+    
     # Complex CASE for renew_upgrade_revenue - cast to DECIMAL(38, 17)
     F.when(
-        (F.col("a.agreement_status_group") == "Upgrade due to prepaid") &
-        (F.col("ic.name").isin("Prepaid")),
+        (F.col("a.agreement_status_group") == "Upgrade due to prepaid") & 
+        (F.col("ic.name").isin("Prepaid")), 
         F.col("a.prepaid_fee") - F.col("upgrade_agt.monthly_fee")
     ).when(
-        (F.col("a.agreement_status_group") == "Upgrade prepaid to prepaid") &
-        (F.coalesce(F.col("a.prepaid_fee"), F.lit(0)) == 0),
+        (F.col("a.agreement_status_group") == "Upgrade prepaid to prepaid") & 
+        (F.coalesce(F.col("a.prepaid_fee"), F.lit(0)) == 0), 
         F.lit(0)
     ).when(
-        (F.col("a.agreement_status_group") == "Upgrade prepaid to prepaid") &
-        (F.coalesce(F.col("a.prepaid_fee"), F.lit(0)) != 0) &
-        (F.col("ic.name").isin("Prepaid")),
+        (F.col("a.agreement_status_group") == "Upgrade prepaid to prepaid") & 
+        (F.coalesce(F.col("a.prepaid_fee"), F.lit(0)) != 0) & 
+        (F.col("ic.name").isin("Prepaid")), 
         F.coalesce(F.col("a.prepaid_fee"), F.lit(0)) - F.coalesce(F.col("upgrade_agt.prepaid_fee"), F.lit(0))
     ).when(
-        (F.col("a.agreement_status_group") == "Renew prepaid to prepaid renew") &
-        (F.col("ic.name").isin("Prepaid")),
+        (F.col("a.agreement_status_group") == "Renew prepaid to prepaid renew") & 
+        (F.col("ic.name").isin("Prepaid")), 
         F.col("e.amount").cast("decimal(18,4)") - F.coalesce(F.col("prev_agt_invoice.amount"), F.lit(0))
     ).when(
-        (F.col("a.agreement_status_group") == "Rejoin prepaid to prepaid renew") &
-        (F.col("ic.name").isin("Prepaid")),
+        (F.col("a.agreement_status_group") == "Rejoin prepaid to prepaid renew") & 
+        (F.col("ic.name").isin("Prepaid")), 
         F.col("e.amount").cast("decimal(18,4)") - F.coalesce(F.col("prev_agt_invoice.amount"), F.lit(0))
     ).when(
-        (F.col("a.agreement_status_type").isin("Upgrade")) &
-        (F.col("ic.name").isin("Prepaid")) &
-        (F.col("b.service_category_id").isin(82, 17)),
+        (F.col("a.agreement_status_type").isin("Upgrade")) & 
+        (F.col("ic.name").isin("Prepaid")) & 
+        (F.col("b.service_category_id").isin(82, 17)), 
         F.col("e.amount").cast("decimal(18,4)") - F.coalesce(F.col("upgrade_agt_invoice.amount"), F.lit(0))
     ).when(
-        (F.col("a.agreement_status_type").isin("Upgrade")) &
-        (F.col("ic.name").isin("First Month")) &
-        (F.col("b.service_category_id").isin(82, 17)),
+        (F.col("a.agreement_status_type").isin("Upgrade")) & 
+        (F.col("ic.name").isin("First Month")) & 
+        (F.col("b.service_category_id").isin(82, 17)), 
         F.coalesce(F.col("a.monthly_fee"), F.lit(0)) - F.coalesce(F.col("upgrade_agt.monthly_fee"), F.lit(0))
     ).when(
-        (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) &
-        (F.col("ic.name").isin("Prepaid")) &
-        (F.col("b.service_category_id").isin(82, 17)),
+        (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) & 
+        (F.col("ic.name").isin("Prepaid")) & 
+        (F.col("b.service_category_id").isin(82, 17)), 
         F.col("e.amount").cast("decimal(18,4)") - F.coalesce(F.col("prev_agt_invoice.amount"), F.lit(0))
     ).when(
-        (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) &
-        (F.col("ic.name").isin("First Month")) &
-        (F.col("b.service_category_id").isin(82, 17)),
+        (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) & 
+        (F.col("ic.name").isin("First Month")) & 
+        (F.col("b.service_category_id").isin(82, 17)), 
         F.coalesce(F.col("a.monthly_fee"), F.lit(0)) - F.coalesce(F.col("prev_agt.monthly_fee"), F.lit(0))
     ).cast("decimal(38,17)").alias("renew_upgrade_revenue"),
-
+    
     # Complex CASE for first_last_month_revenue - cast to DECIMAL(19, 4)
     F.when(
-        (F.col("a.agreement_status_type") == "New") &
-        (F.col("ic.name").isin("First Month")),
+        (F.col("a.agreement_status_type") == "New") & 
+        (F.col("ic.name").isin("First Month")), 
         F.col("a.first_month_fee")
     ).when(
-        (F.col("a.agreement_status_type") == "New") &
-        (F.col("ic.name").isin("Last Month")),
+        (F.col("a.agreement_status_type") == "New") & 
+        (F.col("ic.name").isin("Last Month")), 
         F.col("a.last_month_fee")
     ).when(
-        (F.col("a.agreement_status_type") == "Upgrade") &
-        (F.col("ic.name").isin("First Month")),
+        (F.col("a.agreement_status_type") == "Upgrade") & 
+        (F.col("ic.name").isin("First Month")), 
         F.col("a.first_month_fee") - F.col("upgrade_agt.first_month_fee")
     ).when(
-        (F.col("a.agreement_status_type") == "Upgrade") &
-        (F.col("ic.name").isin("Last Month")),
+        (F.col("a.agreement_status_type") == "Upgrade") & 
+        (F.col("ic.name").isin("Last Month")), 
         F.col("a.last_month_fee") - F.col("upgrade_agt.last_month_fee")
     ).when(
-        (F.col("f.source") == "CN") &
-        (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) &
-        (F.col("ic.name").isin("First Month")),
+        (F.col("f.source") == "CN") & 
+        (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) & 
+        (F.col("ic.name").isin("First Month")), 
         F.col("a.first_month_fee") - F.col("prev_agt.first_month_fee")
     ).when(
-        (F.col("f.source") == "CN") &
-        (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) &
-        (F.col("ic.name").isin("Last Month")),
+        (F.col("f.source") == "CN") & 
+        (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) & 
+        (F.col("ic.name").isin("Last Month")), 
         F.col("a.last_month_fee") - F.col("prev_agt.last_month_fee")
     ).when(
-        (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) &
-        (F.col("prev_agt_pst.name").isin("Short Term", "Membership")) &
-        (F.col("ic.name").isin("First Month")),
+        (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) & 
+        (F.col("prev_agt_pst.name").isin("Short Term", "Membership")) & 
+        (F.col("ic.name").isin("First Month")), 
         F.col("a.first_month_fee") - F.col("prev_agt.first_month_fee")
     ).when(
-        (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) &
-        (F.col("prev_agt_pst.name").isin("Short Term", "Membership")) &
-        (F.col("ic.name").isin("Last Month")),
+        (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) & 
+        (F.col("prev_agt_pst.name").isin("Short Term", "Membership")) & 
+        (F.col("ic.name").isin("Last Month")), 
         F.col("a.last_month_fee") - F.col("prev_agt.last_month_fee")
     ).cast("decimal(19,4)").alias("first_last_month_revenue"),
 
     # updated on 2025.08.21. Added
     F.when(
-        (F.col("ic.name").isin("Others", "Rounding")),
+        (F.col("ic.name").isin("Others", "Rounding")), 
         F.lit(0)
     ).when(
         (F.col("e.source") == "CN") &
-        (F.col("e.amount") <= F.lit(0).cast("decimal(18,4)")),
+        (F.col("e.amount") <= F.lit(0).cast("decimal(18,4)")), 
         F.lit(0)
     ).otherwise(F.lit(1)).alias("entitle_to_pos_discount"),
     F.coalesce(F.col("ri.raw_amount"), F.lit(0)).alias("invoice_raw_total_amount"),
@@ -854,8 +854,8 @@ fct_membership_sales = join_membership_sales.select(
     F.coalesce(F.col("pos_dis.amount"), F.lit(0)).alias("pos_discount_amount"),
     F.coalesce(F.col("ih.total_amount"), F.lit(0)).alias("invoice_header_total_amount"),
     F.when(
-        (F.col("invoice_detail_amount") <= 0) |
-        (F.coalesce(F.col("ri.raw_amount"), F.lit(0)) == 0),
+        (F.col("invoice_detail_amount") <= 0) | 
+        (F.coalesce(F.col("ri.raw_amount"), F.lit(0)) == 0), 
         F.lit(0)
     ).otherwise(F.col("invoice_detail_amount") / F.col("ri.raw_amount")).alias("invoice_amount_ratio"),
 
@@ -889,10 +889,10 @@ fct_membership_sales = join_membership_sales.select(
     F.col("first_last_month_revenue").cast("decimal(19,4)"),
     F.col("invoice_detail_amount").alias("bk_invoice_detail_amount").cast("decimal(18,4)"),
     F.col("fct_invoice_detail_key").cast("string"),
-
+    
     # Complex CASE for adjusted invoice_detail_amount -- account for pos discount and reverse invoice by ratio
     F.when(
-        F.col("invoice_amount_ratio") == 0,
+        F.col("invoice_amount_ratio") == 0, 
         F.col("invoice_detail_amount")
     )
     .when(
@@ -901,23 +901,23 @@ fct_membership_sales = join_membership_sales.select(
     )
     .otherwise(
         (
-            F.col("invoice_detail_amount") -
-            F.abs(F.round(F.col("invoice_amount_ratio") * F.col("pos_discount_amount"), 2)) +
+            F.col("invoice_detail_amount") - 
+            F.abs(F.round(F.col("invoice_amount_ratio") * F.col("pos_discount_amount"), 2)) + 
             F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2)
         ).cast(DecimalType(18, 4))
     ).cast("decimal(18,4)").alias("invoice_detail_amount"),
-
+    
     # Adjusted pos_discount_amount
     F.when(
-        (F.col("pos_discount_amount") == 0) | (F.col("entitle_to_pos_discount") == 0),
+        (F.col("pos_discount_amount") == 0) | (F.col("entitle_to_pos_discount") == 0), 
         F.lit(0)
     ).otherwise(
         F.round(F.col("invoice_amount_ratio") * F.col("pos_discount_amount"), 2).cast(DecimalType(18, 4))
     ).cast("decimal(18,4)").alias("pos_discount_amount"),
-
+    
     # voided_amount calculation -- voided or reversed invoice amount
     F.when(
-        F.col("invoice_reversed_amount") == 0,
+        F.col("invoice_reversed_amount") == 0, 
         F.lit(0)
     ).otherwise(
         F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2).cast(DecimalType(18, 4))
@@ -926,7 +926,7 @@ fct_membership_sales = join_membership_sales.select(
     'a.dim_contact_key',
     'signed_date'
 ).withColumn(
-    "dim_location_key",
+    "dim_location_key", 
     F.when(F.col("dim_location_key").isNull(), F.concat(F.col("source"), F.lit("9999")))
         .otherwise(F.col("dim_location_key"))
 )
@@ -1027,8 +1027,8 @@ join_agreement_sales = (
     silver_agreement.alias("a")
     .join(
         silver_invoice_detail.alias("e"),
-        (F.concat(F.col("e.source"), F.col("e.item_id").cast("bigint")) == F.col("a.bk")) &
-        (F.col("e.item_type") == "agreement") &
+        (F.concat(F.col("e.source"), F.col("e.item_id").cast("bigint")) == F.col("a.bk")) & 
+        (F.col("e.item_type") == "agreement") & 
         (F.col("e.active") == 1),       # updated on 2025.08.21. Added
         "inner"
     )
@@ -1082,7 +1082,7 @@ join_agreement_sales = (
     .join(
         first_valid_agreement.alias("first_agmt"),
         (F.concat(F.col("first_agmt.source"), F.col("first_agmt.contact_id"), F.col("first_agmt.package_type_id").cast("bigint")) == F.concat(F.col("a.source"), F.col("a.contact_id"), F.col("a.package_type_id").cast("bigint"))) &
-        (F.col("a.start_date") > F.col("first_agmt.start_date")) &
+        (F.col("a.start_date") > F.col("first_agmt.start_date")) & 
         (F.col("a.bk") != F.col("first_agmt.bk")),
         "left"
     )
@@ -1130,24 +1130,24 @@ join_agreement_sales = (
             (F.col("a.source") == "SG") &
             (F.col("first_agmt.bk").isNull()) &
             (F.col("a.package_type_id").isin(2, 3, 10)) &           # updated on 2025.08.21. Added #10
-            (F.col("b.is_pos") == 0),
+            (F.col("b.is_pos").cast("int") == 0), 
             1
         ).when(
             (F.col("a.source") == "SG") &
             (F.col("a.package_type_id").isin(2, 3, 10)),            # updated on 2025.08.21. Added #10
             0
-        ).otherwise(F.col("b.is_new")).cast("int").alias("is_new"),
+        ).otherwise(F.col("b.is_new").cast("int")).cast("int").alias("is_new"),
         F.when(
             (F.col("a.source") == "SG") &
             (F.col("first_agmt.bk").isNotNull()) &
             (F.col("a.package_type_id").isin(2, 3, 10)) &           # updated on 2025.08.21. Added #10
-            (F.col("b.is_pos") == 0),
+            (F.col("is_pos").cast("int") == 0), 
             1
         ).when(
             (F.col("a.source") == "SG") &
             (F.col("a.package_type_id").isin(2, 3, 10)),            # updated on 2025.08.21. Added #10
             0
-        ).otherwise(F.col("b.is_renew")).cast("int").alias("is_renew"),
+        ).otherwise(F.col("b.is_renew").cast("int")).cast("int").alias("is_renew"),
         # F.col("b.is_new").cast("int").alias("is_new"),
         # F.col("b.is_renew").cast("int").alias("is_renew"),
         F.col("b.name").cast("string").alias("name"),
@@ -1160,12 +1160,12 @@ join_agreement_sales = (
         F.col("pos_dis.amount").cast("decimal(38,18)").alias("pos_discount_amount"),
         F.col("ri.raw_amount").alias("invoice_raw_total_amount"),
         F.when(
-            F.col("ic.name").isin(["Others", "Rounding"]),
+            F.col("ic.name").isin(["Others", "Rounding"]), 
             0
         )
         .when(
-            (F.col("e.source") == "CN") &
-            (F.col("e.amount") <= F.lit(0).cast("decimal(18, 4)")),
+            (F.col("e.source") == "CN") & 
+            (F.col("e.amount") <= F.lit(0).cast("decimal(18, 4)")), 
             0
         ).otherwise(1).alias("entitle_to_pos_discount"),
         F.coalesce(F.col("reverse_invoice.reverse_amount"), F.lit(0)).alias("reversed_amount"),
@@ -1173,7 +1173,6 @@ join_agreement_sales = (
         F.concat(F.col("e.source"), F.col("e.id").cast("bigint")).cast("string").alias("fct_invoice_detail_key"),
     )
 )
-
 
 #====== [END] CELL 31 ======
 
@@ -1196,9 +1195,9 @@ agg_agreement_sales = (
         "ext_ref_package_type_id",
         "package_sub_type_id",
         "package_term_id",
-        "is_pos",
-        "is_new",
-        "is_renew",
+        F.col("is_pos").cast("int"),
+        F.col("is_new").cast("int"),
+        F.col("is_renew").cast("int"),
         "service_category_id",
         "service_category_name",
         "service_name",
@@ -1217,8 +1216,8 @@ agg_agreement_sales = (
         F.coalesce(F.sum("reversed_amount"), F.lit(0)).alias("invoice_reversed_amount"),
         F.coalesce(F.sum("pos_discount_amount"), F.lit(0)).alias("pos_discount_amount"),
         F.when(
-            (F.sum("invoice_detail_amount") <= 0) |
-            (F.sum("invoice_raw_total_amount") == 0),
+            (F.sum("invoice_detail_amount") <= 0) | 
+            (F.sum("invoice_raw_total_amount") == 0), 
             0
         ).otherwise(
             F.sum("invoice_detail_amount") / F.sum("invoice_raw_total_amount")
@@ -1258,37 +1257,37 @@ fct_agreement_sales = (
 
         # Complex CASE for adjusted total_revenue_agreement
         F.when(
-            F.col("invoice_amount_ratio") == 0,
+            F.col("invoice_amount_ratio") == 0, 
             F.col("total_revenue_agreement")
         ).when(
             (F.col("pos_discount_amount") == 0) | (F.col("entitle_to_pos_discount") == 0),
             (F.col("total_revenue_agreement") + F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2)).cast("decimal(38,18)")
         ).otherwise(
             (
-                F.col("total_revenue_agreement") -
-                F.abs(F.round(F.col("invoice_amount_ratio") * F.col("pos_discount_amount"), 2)) +
+                F.col("total_revenue_agreement") - 
+                F.abs(F.round(F.col("invoice_amount_ratio") * F.col("pos_discount_amount"), 2)) + 
                 F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2)
             ).cast("decimal(38,18)")
         ).cast("decimal(28, 4)").alias("total_revenue_agreement"),
-
+        
         # Adjusted pos_discount_amount
         F.when(
-            (F.col("pos_discount_amount") == 0) | (F.col("entitle_to_pos_discount") == 0),
+            (F.col("pos_discount_amount") == 0) | (F.col("entitle_to_pos_discount") == 0), 
             0
         ).otherwise(
             F.round(F.col("invoice_amount_ratio") * F.col("pos_discount_amount"), 2).cast("decimal(38,18)")
         ).cast("decimal(18, 4)").alias("pos_discount_amount"),
-
+        
         # voided_amount calculation
         F.when(
-            F.col("invoice_reversed_amount") == 0,
+            F.col("invoice_reversed_amount") == 0, 
             0
         ).otherwise(
             F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2).cast("decimal(38,18)")
         ).cast("decimal(18, 4)").alias("voided_amount")
     )
     .withColumn(
-        "dim_location_key",
+        "dim_location_key", 
         F.when(F.col("dim_location_key").isNull(), F.concat(F.col("source"), F.lit("9999")))
          .otherwise(F.col("dim_location_key"))
     )
@@ -1385,22 +1384,22 @@ join_product_sales = (
     )
     .join(
         silver_invoice_header.alias("ih"),
-        (F.concat(F.col("id.source"), F.col("id.invoice_header_id")) == F.concat(F.col("ih.source"), F.col("ih.id"))) &
+        (F.concat(F.col("id.source"), F.col("id.invoice_header_id")) == F.concat(F.col("ih.source"), F.col("ih.id"))) & 
         (F.col("ih.active") == 1) &                                # updated on 2025.08.22. Added
         (F.col("ih.total_amount") >= 0),                            # updated on 2025.08.22. Added
         "inner"
     )
     .join(
         silver_product.alias("p"),
-        (F.concat(F.col("id.source"), F.col("id.item_id").cast("bigint")) == F.concat(F.col("p.source"), F.col("p.id").cast("bigint"))) &
+        (F.concat(F.col("id.source"), F.col("id.item_id").cast("bigint")) == F.concat(F.col("p.source"), F.col("p.id").cast("bigint"))) & 
         (F.col("p.active") == 1),                                   # updated on 2025.08.22. Added
         "inner"
     )
     .join(                                                          # updated on 2025.08.22. Added
         silver_invoice_category.alias("ic"),
         (F.concat(F.col("ic.source"), F.col("ic.id").cast("bigint")) == F.concat(F.col("id.source"), F.col("id.invoice_category_id").cast("bigint"))) &
-        (F.col("ic.active") == 1) &
-        ~(F.col("ic.name").isin(["Others", "Rounding"])),
+        (F.col("ic.active") == 1) & 
+        ~(F.col("ic.name").isin(["Others", "Rounding"])), 
         "inner"
     )
     .join(
@@ -1437,7 +1436,7 @@ join_product_sales = (
         F.col("reverse_invoice.reverse_invoice_header_bk") == F.concat(F.col("id.source"), F.col("id.invoice_header_id").cast("bigint")),
         "left"
     )
-    # update end
+    # update end 
 
     .select(
         F.col("a.bk").cast("string").alias("fct_agreement_key"),
@@ -1460,18 +1459,18 @@ join_product_sales = (
         F.col("ri.raw_amount").cast(DecimalType(18, 4)).alias("invoice_raw_total_amount"),
 
         F.when(
-            F.col("ic.name").isin(["Others", "Rounding"]),
+            F.col("ic.name").isin(["Others", "Rounding"]), 
             0
         ).when(
-            (F.col("id.source") == "CN") &
-            (F.col("id.amount") <= F.lit(0).cast(DecimalType(18, 4))),
+            (F.col("id.source") == "CN") & 
+            (F.col("id.amount") <= F.lit(0).cast(DecimalType(18, 4))), 
             0
         ).otherwise(1).cast("int").alias("entitle_to_pos_discount"),
-
+        
         F.coalesce(F.col("reverse_invoice.reverse_amount"), F.lit(0)).cast(DecimalType(18, 4)).alias("reversed_amount"),
-
+        
         F.col("ih.total_amount").cast(DecimalType(18, 4)).alias("invoice_header_total_amount")
-        # update end
+        # update end 
 
     )
 )
@@ -1503,10 +1502,10 @@ fct_product_sales = (
         F.coalesce(F.sum("invoice_raw_total_amount"), F.lit(0)).cast(DecimalType(18, 4)).alias("invoice_raw_total_amount"),
         F.coalesce(F.sum("reversed_amount"), F.lit(0)).cast(DecimalType(18, 4)).alias("invoice_reversed_amount"),
         F.coalesce(F.sum("pos_discount_amount"), F.lit(0)).cast(DecimalType(18, 4)).alias("pos_discount_amount"),
-
+        
         F.when(
-            (F.sum("invoice_detail_amount") <= 0) |
-            (F.sum("invoice_raw_total_amount") == 0),
+            (F.sum("invoice_detail_amount") <= 0) | 
+            (F.sum("invoice_raw_total_amount") == 0), 
             F.lit(0)
         ).otherwise(
             (F.sum("invoice_detail_amount") / F.sum("invoice_raw_total_amount")).cast(DecimalType(18, 10))
@@ -1527,41 +1526,41 @@ fct_product_sales = (
         F.col("source").cast("string"),
         F.col("post_date").cast("timestamp"),
         F.col("total_revenue_product").cast(DecimalType(28, 4)).alias("bk_total_revenue_product"),
-
+        
         # Complex CASE for adjusted total_revenue_product
         F.when(
-            F.col("invoice_amount_ratio") == 0,
+            F.col("invoice_amount_ratio") == 0, 
             F.col("total_revenue_product")
         ).when(
-            (F.col("pos_discount_amount") == 0) |
+            (F.col("pos_discount_amount") == 0) | 
             (F.col("entitle_to_pos_discount") == 0),
             (F.col("total_revenue_product") + F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2)).cast(DecimalType(18, 4))
         ).otherwise(
             (
-                F.col("total_revenue_product") -
-                F.abs(F.round(F.col("invoice_amount_ratio") * F.col("pos_discount_amount"), 2)) +
+                F.col("total_revenue_product") - 
+                F.abs(F.round(F.col("invoice_amount_ratio") * F.col("pos_discount_amount"), 2)) + 
                 F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2)
             ).cast(DecimalType(18, 4))
         ).cast(DecimalType(28, 4)).alias("total_revenue_product"),
-
+        
         F.when(
-            (F.col("pos_discount_amount") == 0) |
-            (F.col("entitle_to_pos_discount") == 0),
+            (F.col("pos_discount_amount") == 0) | 
+            (F.col("entitle_to_pos_discount") == 0), 
             0
         ).otherwise(
             F.round(F.col("invoice_amount_ratio") * F.col("pos_discount_amount"), 2).cast(DecimalType(18, 4))
         ).cast(DecimalType(18, 4)).alias("pos_discount_amount"),
-
+        
         # voided_amount calculation
         F.when(
-            F.col("invoice_reversed_amount") == 0,
+            F.col("invoice_reversed_amount") == 0, 
             0
         ).otherwise(
             F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2).cast(DecimalType(18, 4))
         ).cast(DecimalType(18, 4)).alias("voided_amount")
     )
     .withColumn(
-        "dim_location_key",
+        "dim_location_key", 
         F.when(F.col("dim_location_key").isNull(), F.concat(F.col("source"), F.lit("9999")))
          .otherwise(F.col("dim_location_key"))
     )
@@ -1627,7 +1626,7 @@ join_outstanding = (
         F.col("ph.location_id").cast("bigint").alias("location_id"),
     )
     .withColumn(
-        "dim_location_key",
+        "dim_location_key", 
         F.when(F.col("dim_location_key").isNull(), F.concat(F.col("source"), F.lit("9999")))
          .otherwise(F.col("dim_location_key"))
     )
@@ -1715,9 +1714,9 @@ exchange_rate = (
     .withColumnRenamed("USD", "transaction_USD")
     .withColumnRenamed("HKD", "transaction_HKD")
     .withColumn(
-        "transaction_HKD",
+        "transaction_HKD", 
         F.when(
-            F.col("basesymbol") == "HKD",
+            F.col("basesymbol") == "HKD", 
             F.lit(1)
         ).otherwise(F.col("transaction_HKD"))
     )
@@ -1753,7 +1752,7 @@ nmu_membership_sales =(
     membership_sales.alias('sales')
     .join(
         accounts_nmu_ym.alias('nmu'),
-        F.col('sales.dim_contact_key') == F.col('nmu.dim_contact_key'),
+        F.col('sales.dim_contact_key') == F.col('nmu.dim_contact_key'), 
         'left'
     )
     .select(
@@ -1770,11 +1769,11 @@ nmu_membership_sales =(
     .withColumn(
         "nmu_ind",
         F.when(
-            (F.col("nmu_ym").isNull()),
+            (F.col("nmu_ym").isNull()), 
             99
         )
         .when(
-            (F.col("nmu_ym") == F.date_format(F.col('post_date'), 'yyyyMM')),
+            (F.col("nmu_ym") == F.date_format(F.col('post_date'), 'yyyyMM')), 
             1
         )
         .otherwise(0)
@@ -1789,7 +1788,7 @@ nmu_membership_sales =(
 
 flag_membership_sales = (
     nmu_membership_sales
-    .withColumn("137_flag",
+    .withColumn("137_flag", 
         F.when(
             (F.col("source").isin(["HK", "SG"])) &
             (F.col("package_sub_type_code").isin(["MEM"])) &
@@ -1808,7 +1807,7 @@ flag_membership_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("139_flag",
+    .withColumn("139_flag", 
         F.when(
             (F.col("source").isin(["HK"])) &
             (F.col("package_sub_type_code").isin(["MEM"])) &
@@ -1837,7 +1836,7 @@ flag_membership_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("140_flag",
+    .withColumn("140_flag", 
         F.when(
             (F.col("source").isin(["HK"])) &
             (F.col("package_sub_type_code").isin(["MEM"])) &
@@ -1866,10 +1865,10 @@ flag_membership_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("141_flag",
+    .withColumn("141_flag", 
         F.lit(0)
     )
-    .withColumn("142_flag",
+    .withColumn("142_flag", 
         F.when(
             (F.col("source").isin(["HK", "SG"])) &
             (F.col("package_sub_type_code").isin(["ST"])) &
@@ -1881,7 +1880,7 @@ flag_membership_sales = (
             , 0
         ).otherwise(0)
     )
-    .withColumn("144_flag",
+    .withColumn("144_flag", 
         F.when(
             (F.col("source").isin(["HK"])) &
             (F.col("package_sub_type_code").isin(["MEM"])) &
@@ -1909,7 +1908,7 @@ flag_membership_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("145_flag",
+    .withColumn("145_flag", 
         F.when(
             (F.col("source").isin(["HK"])) &
             (F.col("package_sub_type_code").isin(["MEM"])) &
@@ -1939,7 +1938,7 @@ flag_membership_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("146_flag",
+    .withColumn("146_flag", 
         F.when(
             (F.col("source").isin(["HK"])) &
             (F.col("package_sub_type_code").isin(["MEM"])) &
@@ -1954,7 +1953,7 @@ flag_membership_sales = (
             , 0
         ).otherwise(0)
     )
-    .withColumn("147_flag",
+    .withColumn("147_flag", 
         F.when(
             (F.col("source").isin(["HK"])) &
             (F.col("package_sub_type_code").isin(["MEM"])) &
@@ -1984,7 +1983,7 @@ flag_membership_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("148_flag",
+    .withColumn("148_flag", 
         F.when(
             (F.col("source").isin(["HK"])) &
             (F.col("package_sub_type_code").isin(["MEM"])) &
@@ -2014,7 +2013,7 @@ flag_membership_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("149_flag",
+    .withColumn("149_flag", 
         F.when(
             (F.col("source").isin(["HK", "SG"])) &
             (F.col("package_sub_type_code").isin(["MEM"])) &
@@ -2026,8 +2025,8 @@ flag_membership_sales = (
             (F.col("invoice_category_name") == "Pro-rata")
             , 1
         ).otherwise(0)
-        )
-    .withColumn("151_flag",
+        ) 
+    .withColumn("151_flag", 
         F.when(
             (F.col("source").isin(["HK"])) &
             (F.col("package_sub_type_code").isin(["MEM", "ST"])) &
@@ -2051,7 +2050,7 @@ flag_membership_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("152_flag",
+    .withColumn("152_flag", 
         F.when(
             (F.col("source").isin(["HK"])) &
             (F.col("package_sub_type_code").isin(["MEM", "ST"])) &
@@ -2078,7 +2077,7 @@ flag_membership_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("154_flag",
+    .withColumn("154_flag", 
         F.when(
             (F.col("source").isin(["HK"])) &
             (F.col("package_sub_type_code").isin(["MEM", "ST"])) &
@@ -2105,7 +2104,7 @@ flag_membership_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("155_flag",
+    .withColumn("155_flag", 
         F.when(
             (F.col("source").isin(["HK"])) &
             (F.col("package_sub_type_code").isin(["MEM", "ST"])) &
@@ -2132,7 +2131,7 @@ flag_membership_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("156_flag",
+    .withColumn("156_flag", 
         F.when(
             (F.col("source").isin(["HK"])) &
             (F.col("package_sub_type_code").isin(["MEM", "ST"])) &
@@ -2159,7 +2158,7 @@ flag_membership_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("157_flag",
+    .withColumn("157_flag", 
         F.when(
             (F.col("source").isin(["HK"])) &
             (F.col("package_sub_type_code").isin(["MEM", "ST"])) &
@@ -2186,7 +2185,7 @@ flag_membership_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("201_flag",
+    .withColumn("201_flag", 
         F.when(
             (F.col("source").isin(["HK", "SG"])) &
             (F.col("package_sub_type_code").isin(["MEM"])) &
@@ -2198,7 +2197,7 @@ flag_membership_sales = (
             (F.col("invoice_category_name") == "Autopay")
             , 1
         ).otherwise(0)
-    )
+    ) 
 )
 
 
@@ -2209,10 +2208,10 @@ flag_membership_sales = (
 
 flagchk_membership_sales = flag_membership_sales.withColumn(
     "multiple_flags_count",
-    (F.col("137_flag").cast("int") + F.col("139_flag").cast("int") + F.col("140_flag").cast("int") + F.col("141_flag").cast("int") +
-     F.col("142_flag").cast("int") + F.col("144_flag").cast("int") + F.col("145_flag").cast("int") + F.col("146_flag").cast("int") +
-     F.col("147_flag").cast("int") + F.col("148_flag").cast("int") + F.col("149_flag").cast("int") + F.col("151_flag").cast("int") +
-     F.col("152_flag").cast("int") + F.col("154_flag").cast("int") + F.col("155_flag").cast("int") + F.col("156_flag").cast("int") +
+    (F.col("137_flag").cast("int") + F.col("139_flag").cast("int") + F.col("140_flag").cast("int") + F.col("141_flag").cast("int") + 
+     F.col("142_flag").cast("int") + F.col("144_flag").cast("int") + F.col("145_flag").cast("int") + F.col("146_flag").cast("int") + 
+     F.col("147_flag").cast("int") + F.col("148_flag").cast("int") + F.col("149_flag").cast("int") + F.col("151_flag").cast("int") + 
+     F.col("152_flag").cast("int") + F.col("154_flag").cast("int") + F.col("155_flag").cast("int") + F.col("156_flag").cast("int") + 
      F.col("157_flag").cast("int") + F.col("201_flag").cast("int"))
 ).withColumn(
     "has_multiple_flags",
@@ -2275,7 +2274,7 @@ nmu_agreement_sales =(
     agreement_sales.alias('sales')
     .join(
         accounts_nmu_ym.alias('nmu'),
-        F.col('sales.dim_contact_key') == F.col('nmu.dim_contact_key'),
+        F.col('sales.dim_contact_key') == F.col('nmu.dim_contact_key'), 
         'left'
     )
     .select(
@@ -2291,11 +2290,11 @@ nmu_agreement_sales =(
     .withColumn(
         "nmu_ind",
         F.when(
-            (F.col("nmu_ym").isNull()),
+            (F.col("nmu_ym").isNull()), 
             99
         )
         .when(
-            (F.col("nmu_ym") == F.date_format(F.col('post_date'), 'yyyyMM')),
+            (F.col("nmu_ym") == F.date_format(F.col('post_date'), 'yyyyMM')), 
             1
         )
         .otherwise(0)
@@ -2310,13 +2309,13 @@ nmu_agreement_sales =(
 
 flag_agreement_sales = (
     nmu_agreement_sales
-    .withColumn("159_flag",
+    .withColumn("159_flag", 
         F.when(
             (F.col("source").isin(["HK", "SG"])) &
             (F.col("ext_ref_package_type_id") == "2") &
             (~F.upper(F.col("name")).contains("ONLINE")) &
             (~F.upper(F.col("name")).contains("OUTDOOR")) &
-            (F.col("is_pos") == 1)
+            (F.col("is_pos") == 1) 
             , 1
         ).when(
             (F.col("source").isin(["CN"])) &
@@ -2327,13 +2326,13 @@ flag_agreement_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("160_flag",
+    .withColumn("160_flag", 
         F.when(
             (F.col("source").isin(["HK", "SG"])) &
             (F.col("ext_ref_package_type_id") == "2") &
             (~F.upper(F.col("name")).contains("ONLINE")) &
             (~F.upper(F.col("name")).contains("OUTDOOR")) &
-            (F.col("is_new") == 1)
+            (F.col("is_new") == 1) 
             , 1
         ).when(
             (F.col("source").isin(["CN"])) &
@@ -2345,13 +2344,13 @@ flag_agreement_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("161_flag",
+    .withColumn("161_flag", 
         F.when(
             (F.col("source").isin(["HK", "SG"])) &
             (F.col("ext_ref_package_type_id") == "2") &
             (~F.upper(F.col("name")).contains("ONLINE")) &
             (~F.upper(F.col("name")).contains("OUTDOOR")) &
-            (F.col("is_renew") == 1)
+            (F.col("is_renew") == 1) 
             , 1
         ).when(
             (F.col("source").isin(["CN"])) &
@@ -2362,7 +2361,7 @@ flag_agreement_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("162_flag",
+    .withColumn("162_flag", 
         F.when(
             (F.col("source").isin(["HK", "CN", "SG"])) &
             (F.col("ext_ref_package_type_id") == "2") &
@@ -2370,27 +2369,27 @@ flag_agreement_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("163_flag",
+    .withColumn("163_flag", 
         F.when(
             (F.col("source").isin(["HK", "SG"])) &
             (F.col("ext_ref_package_type_id") == "3") &
             (~F.upper(F.col("name")).contains("ONLINE")) &
-            (F.col("is_pos") == 1)
+            (F.col("is_pos") == 1) 
             , 1
         ).when(
             (F.col("source").isin(["CN"])) &
             (F.col("ext_ref_package_type_id") == "3") &
             (~F.upper(F.col("name")).contains("ONLINE")) &
-            (F.upper(F.col("name")).contains("POS"))
+            (F.upper(F.col("name")).contains("POS")) 
             , 1
         ).otherwise(0)
     )
-    .withColumn("164_flag",
+    .withColumn("164_flag", 
         F.when(
             (F.col("source").isin(["HK", "SG"])) &
             (F.col("ext_ref_package_type_id") == "3") &
             (~F.upper(F.col("name")).contains("ONLINE")) &
-            (F.col("is_new") == 1)
+            (F.col("is_new") == 1) 
             , 1
         ).when(
             (F.col("source").isin(["CN"])) &
@@ -2401,12 +2400,12 @@ flag_agreement_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("165_flag",
+    .withColumn("165_flag", 
         F.when(
             (F.col("source").isin(["HK", "SG"])) &
             (F.col("ext_ref_package_type_id") == "3") &
             (~F.upper(F.col("name")).contains("ONLINE")) &
-            (F.col("is_renew") == 1)
+            (F.col("is_renew") == 1) 
             , 1
         ).when(
             (F.col("source").isin(["CN"])) &
@@ -2416,42 +2415,42 @@ flag_agreement_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("166_flag",
+    .withColumn("166_flag", 
         F.when(
             (F.col("source").isin(["HK", "CN", "SG"])) &
             (F.col("ext_ref_package_type_id") == "3") &
-            (F.upper(F.col("name")).contains("ONLINE"))
+            (F.upper(F.col("name")).contains("ONLINE")) 
             , 1
         ).otherwise(0)
     )
-    .withColumn("167_flag",
+    .withColumn("167_flag", 
         F.when(
             (F.col("source").isin(["HK"])) &
-            (F.col("service_category_id") == 28)
+            (F.col("service_category_id") == 28) 
             , 1
         ).when(
             (F.col("source").isin(["SG"])) &
-            (F.col("service_category_id") == 69)
+            (F.col("service_category_id") == 69) 
             , 1
         ).when(
             (F.col("source").isin(["CN"])) &
-            (F.col("service_category_id") == 66)
+            (F.col("service_category_id") == 66) 
             , 1
         ).otherwise(0)
     )
-    .withColumn("168_flag",
+    .withColumn("168_flag", 
         F.when(
             (F.col("source").isin(["HK", "CN", "SG"])) &
             (F.col("service_category_id").isin([6]))
             , 1
         ).otherwise(0)
     )
-    .withColumn("169_flag",
+    .withColumn("169_flag", 
         F.when(
             (F.col("source").isin(["HK", "SG"])) &
             (F.col("ext_ref_package_type_id").isin(["103", "104", "116"])) &
             (~F.upper(F.col("name")).contains("ONLINE")) &
-            (F.col("is_pos") == 1)
+            (F.col("is_pos") == 1) 
             , 1
         ).when(
             (F.col("source").isin(["CN"])) &
@@ -2461,12 +2460,12 @@ flag_agreement_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("170_flag",
+    .withColumn("170_flag", 
         F.when(
             (F.col("source").isin(["HK", "SG"])) &
             (F.col("ext_ref_package_type_id").isin(["103", "104", "116"])) &
             (~F.upper(F.col("name")).contains("ONLINE")) &
-            (F.col("is_new") == 1)
+            (F.col("is_new") == 1) 
             , 1
         ).when(
             (F.col("source").isin(["CN"])) &
@@ -2477,12 +2476,12 @@ flag_agreement_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("171_flag",
+    .withColumn("171_flag", 
         F.when(
             (F.col("source").isin(["HK", "SG"])) &
             (F.col("ext_ref_package_type_id").isin(["103", "104", "116"])) &
             (~F.upper(F.col("name")).contains("ONLINE")) &
-            (F.col("is_renew") == 1)
+            (F.col("is_renew") == 1) 
             , 1
         ).when(
             (F.col("source").isin(["CN"])) &
@@ -2492,47 +2491,47 @@ flag_agreement_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("172_flag",
+    .withColumn("172_flag", 
         F.when(
             (F.col("source").isin(["HK", "SG"])) &
             (F.col("ext_ref_package_type_id").isin(["103", "104", "116"])) &
-            (F.upper(F.col("name")).contains("ONLINE"))
+            (F.upper(F.col("name")).contains("ONLINE")) 
             , 1
         ).when(
             (F.col("source").isin(["CN"])) &
             (F.col("ext_ref_package_type_id").isin(["116", "360_27", "103"])) &
-            (F.upper(F.col("name")).contains("ONLINE"))
+            (F.upper(F.col("name")).contains("ONLINE")) 
             , 1
         ).otherwise(0)
     )
-    .withColumn("173_flag",
+    .withColumn("173_flag", 
         F.lit(0)  # BLANK - no calculation logic applied
     )
-    .withColumn("174_flag",
+    .withColumn("174_flag", 
         F.lit(0)  # BLANK - no calculation logic applied
     )
-    .withColumn("175_flag",
+    .withColumn("175_flag", 
         F.lit(0)  # BLANK - no calculation logic applied
     )
-    .withColumn("176_flag",
+    .withColumn("176_flag", 
         F.lit(0)  # BLANK - no calculation logic applied
     )
-    .withColumn("177_flag",
+    .withColumn("177_flag", 
         F.lit(0)  # BLANK - no calculation logic applied
     )
-    .withColumn("178_flag",
+    .withColumn("178_flag", 
         F.lit(0)  # BLANK - no calculation logic applied
     )
-    .withColumn("179_flag",
+    .withColumn("179_flag", 
         F.lit(0)  # BLANK - no calculation logic applied
     )
-    .withColumn("180_flag",
+    .withColumn("180_flag", 
         F.lit(0)  # BLANK - no calculation logic applied
     )
-    .withColumn("181_flag",
+    .withColumn("181_flag", 
         F.lit(0)  # BLANK - no calculation logic applied
     )
-    .withColumn("185_flag",
+    .withColumn("185_flag", 
         F.when(
             (F.col("source").isin(["HK", "CN", "SG"])) &
             (F.col("ext_ref_package_type_id") == "4") &
@@ -2540,52 +2539,52 @@ flag_agreement_sales = (
             , 1
         ).otherwise(0)
     )
-    .withColumn("186_flag",
+    .withColumn("186_flag", 
         F.lit(0)  # BLANK - no calculation logic applied
     )
-    .withColumn("187_flag",
+    .withColumn("187_flag", 
         F.when(
             (F.col("source").isin(["HK", "CN", "SG"])) &
             (F.col("service_category_id") == 15) &
-            (F.col("ext_ref_package_type_id") == "106")
+            (F.col("ext_ref_package_type_id") == "106") 
             , 1
         ).otherwise(0)
     )
-    .withColumn("188_flag",
+    .withColumn("188_flag", 
         F.when(
             (F.col("source").isin(["HK", "CN", "SG"])) &
             (F.col("service_category_id") == 15) &
-            (F.col("ext_ref_package_type_id") == "107")
+            (F.col("ext_ref_package_type_id") == "107") 
             , 1
         ).otherwise(0)
     )
-    .withColumn("189b_flag",
+    .withColumn("189b_flag", 
         F.when(
             (F.col("source").isin(["HK"])) &
-            ((F.col("service_category_id").isin(70)) |
-             (F.col("ext_ref_package_type_id").isin(["360_28", "104", "120"])))
+            ((F.col("service_category_id").isin(70)) | 
+             (F.col("ext_ref_package_type_id").isin(["360_28", "104", "120"]))) 
             , 1
         ).when(
             (F.col("source").isin(["SG"])) &
-            ((F.col("service_category_id").isin(70)) |
-             (F.col("ext_ref_package_type_id").isin(["110", "115", "120"])))
+            ((F.col("service_category_id").isin(70)) | 
+             (F.col("ext_ref_package_type_id").isin(["110", "115", "120"]))) 
             , 1
         ).when(
             (F.col("source").isin(["CN"])) &
-            ((F.col("service_category_id").isin(28)) |
-             (F.col("ext_ref_package_type_id").isin(["360_28", "104", "120"])))
+            ((F.col("service_category_id").isin(28)) | 
+             (F.col("ext_ref_package_type_id").isin(["360_28", "104", "120"]))) 
             , 1
         ).otherwise(0)
     )
-    .withColumn("189c_flag",
+    .withColumn("189c_flag", 
         F.when(
             (F.col("source").isin(["HK"])) &
-            (F.upper(F.col("service_name")).contains("DANCE"))
+            (F.upper(F.col("service_name")).contains("DANCE")) 
             , 1
         ).when(
             (F.col("source").isin(["SG", "CN"])) &
             (~F.col("ext_ref_package_type_id").isin(["106", "107"])) &
-            (F.upper(F.col("service_name")).contains("DANCE"))
+            (F.upper(F.col("service_name")).contains("DANCE")) 
             , 1
         ).otherwise(0)
     )
@@ -2599,13 +2598,13 @@ flag_agreement_sales = (
 
 flagchk_agreement_sales = flag_agreement_sales.withColumn(
     "multiple_flags_count",
-    (F.col("159_flag") + F.col("160_flag") + F.col("161_flag") + F.col("162_flag") +
-     F.col("163_flag") + F.col("164_flag") + F.col("165_flag") + F.col("166_flag") +
-     F.col("167_flag") + F.col("168_flag") + F.col("169_flag") + F.col("170_flag") +
-     F.col("171_flag") + F.col("172_flag") + F.col("173_flag") + F.col("174_flag") +
-     F.col("175_flag") + F.col("176_flag") + F.col("177_flag") + F.col("178_flag") +
-     F.col("179_flag") + F.col("180_flag") + F.col("181_flag") + F.col("185_flag") +
-     F.col("186_flag") + F.col("187_flag") + F.col("188_flag") + F.col("189b_flag") +
+    (F.col("159_flag") + F.col("160_flag") + F.col("161_flag") + F.col("162_flag") + 
+     F.col("163_flag") + F.col("164_flag") + F.col("165_flag") + F.col("166_flag") + 
+     F.col("167_flag") + F.col("168_flag") + F.col("169_flag") + F.col("170_flag") + 
+     F.col("171_flag") + F.col("172_flag") + F.col("173_flag") + F.col("174_flag") + 
+     F.col("175_flag") + F.col("176_flag") + F.col("177_flag") + F.col("178_flag") + 
+     F.col("179_flag") + F.col("180_flag") + F.col("181_flag") + F.col("185_flag") + 
+     F.col("186_flag") + F.col("187_flag") + F.col("188_flag") + F.col("189b_flag") + 
      F.col("189c_flag"))
 ).withColumn(
     "has_multiple_flags",
@@ -2662,7 +2661,7 @@ nmu_product_sales =(
     product_sales.alias('sales')
     .join(
         accounts_nmu_ym.alias('nmu'),
-        F.col('sales.dim_contact_key') == F.col('nmu.dim_contact_key'),
+        F.col('sales.dim_contact_key') == F.col('nmu.dim_contact_key'), 
         'left'
     )
     .select(
@@ -2678,11 +2677,11 @@ nmu_product_sales =(
     .withColumn(
         "nmu_ind",
         F.when(
-            (F.col("nmu_ym").isNull()),
+            (F.col("nmu_ym").isNull()), 
             99
         )
         .when(
-            (F.col("nmu_ym") == F.date_format(F.col('post_date'), 'yyyyMM')),
+            (F.col("nmu_ym") == F.date_format(F.col('post_date'), 'yyyyMM')), 
             1
         )
         .otherwise(0)
@@ -2697,66 +2696,66 @@ nmu_product_sales =(
 
 flag_product_sales = (
     nmu_product_sales
-    .withColumn("182_flag",
+    .withColumn("182_flag", 
         F.when(
             (F.substring(F.col("dim_location_key"), 1, 2).isin(["HK", "CN"])) &
-            (F.col("invoice_category_id") == 21)
+            (F.col("invoice_category_id") == 21) 
             , 1
         ).when(
             (F.substring(F.col("dim_location_key"), 1, 2).isin(["SG"])) &
-            (F.col("invoice_category_id") == 21)
+            (F.col("invoice_category_id") == 21) 
             , 0                     # Fields not ready yet
         ).otherwise(0)
-    )
-    .withColumn("183_flag",
+    ) 
+    .withColumn("183_flag", 
         F.when(
             (F.substring(F.col("dim_location_key"), 1, 2).isin(["HK"])) &
             (F.col("product_id").isin([26, 27])) &
-            (F.col("product_category_name") == "Corporate Item")
+            (F.col("product_category_name") == "Corporate Item") 
             , 1
         ).when(
             (F.substring(F.col("dim_location_key"), 1, 2).isin(["SG"])) &
             (F.col("product_id").isin([15])) &
-            (F.col("product_category_name") == "Corporate Item")
+            (F.col("product_category_name") == "Corporate Item") 
             , 1
         ).when(
             (F.substring(F.col("dim_location_key"), 1, 2).isin(["CN"])) &
-            (F.col("product_id").isin([16]))
+            (F.col("product_id").isin([16])) 
             , 1
         ).otherwise(0)
-    )
-    .withColumn("189_flag",
+    ) 
+    .withColumn("189_flag", 
         F.when(
             (F.substring(F.col("dim_location_key"), 1, 2).isin(["HK"])) &
-            (F.col("product_category_id").isin([441]))
+            (F.col("product_category_id").isin([441])) 
             , 1
         ).when(
             (F.substring(F.col("dim_location_key"), 1, 2).isin(["SG"])) &
-            (F.col("product_category_id").isin([3]))
+            (F.col("product_category_id").isin([3])) 
             , 1
         ).when(
             (F.substring(F.col("dim_location_key"), 1, 2).isin(["CN"])) &
             (F.col("product_name").isin([
-                "Drop In",
-                "Suspension fee",
-                "Locker overnight charge",
-                "Lost Daily Locker Key",
+                "Drop In", 
+                "Suspension fee", 
+                "Locker overnight charge", 
+                "Lost Daily Locker Key", 
                 "Lost Shoe Locker Key"
-            ]))
+            ])) 
             , 1
         ).otherwise(0)
-    )
-    .withColumn("190_flag",
+    ) 
+    .withColumn("190_flag", 
         F.when(
             (F.substring(F.col("dim_location_key"), 1, 2).isin(["HK", "CN", "SG"])) &
-            (F.col("product_category_id").isin([434, 435]))
+            (F.col("product_category_id").isin([434, 435])) 
             , 1
         ).otherwise(0)
-    )
-    .withColumn("191_flag",
+    ) 
+    .withColumn("191_flag", 
         F.when(
             (F.substring(F.col("dim_location_key"), 1, 2).isin(["HK", "CN", "SG"])) &
-            (F.col("product_category_id").isin([430, 123]))
+            (F.col("product_category_id").isin([430, 123])) 
             , 1
         ).otherwise(0)
     )
@@ -2817,12 +2816,12 @@ flag_outstanding =(
         "post_ym",
         F.date_format(F.col('post_date'), 'yyyyMM')
     )
-    .withColumn("193_flag",
+    .withColumn("193_flag", 
         F.when(
             (F.substring(F.col("dim_location_key"), 1, 2).isin(["HK", "CN", "SG"]))
             , 1
         ).otherwise(0)
-    )
+    ) 
 )
 
 
@@ -2879,7 +2878,7 @@ flag_outstanding.write.mode("overwrite").option("overwriteSchema", "true").saveA
 #                 F.sum(f"{col}").alias("total_revenue"),
 #             )
 #             .withColumn('index', F.lit(f"{_i}"))
-#         )
+#         ) 
 #         fct_df = fct_df.unionByName(_tdf)
 
 #     return fct_df
@@ -2986,7 +2985,7 @@ flag_outstanding.write.mode("overwrite").option("overwriteSchema", "true").saveA
 #     .withColumn("year", F.date_format(F.col('post_date'), 'yyyy').cast('int'))
 #     .withColumn("yearmonth", F.date_format(F.col('post_date'), 'yyyyMM').cast('int'))
 #     .withColumn(
-#         "dim_location_key",
+#         "dim_location_key", 
 #         F.when(F.col("dim_location_key").isNull(), F.concat(F.col("source"), F.lit("9999")))
 #          .otherwise(F.col("dim_location_key"))
 #     )
@@ -3019,9 +3018,9 @@ flag_outstanding.write.mode("overwrite").option("overwriteSchema", "true").saveA
 #     group_total_revenue.alias("fct")
 #     .join(
 #         exchange_rate.alias("r"),
-#         # (F.substring(F.col("fct.dim_location_key"), 1, 2) == F.col("r.region")) &
-#         (F.col("fct.source") == F.col("r.region")) &
-#         (F.col("fct.post_date") == F.col("r.date")),
+#         # (F.substring(F.col("fct.dim_location_key"), 1, 2) == F.col("r.region")) & 
+#         (F.col("fct.source") == F.col("r.region")) & 
+#         (F.col("fct.post_date") == F.col("r.date")), 
 #         "left"
 #     )
 #     .withColumn("total_revenue_HKD", (F.col("total_revenue") / F.col("r.transaction_HKD")).cast('decimal(38,18)'))

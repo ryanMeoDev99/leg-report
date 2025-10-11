@@ -390,12 +390,12 @@ PACKAGE_GP_WHEN = lambda p=F.col('package_term_id'), m=F.col('min_committed_mont
 # IS_CLUB_WHEN
 IS_CLUB_WHEN = lambda a=F.col('is_all_locations'), s=F.col('is_single_location'):\
     F.when(
-       a == 1, 1
+       a.cast("int") == 1, F.lit(1)
     )\
     .when(
-       s == 1, 0
+       s.cast("int") == 1, F.lit(0)
     )\
-    .otherwise(1)
+    .otherwise(F.lit(1))
 
 # NMUC
 def NMUC_LAYER_WHEN(

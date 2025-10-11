@@ -35,13 +35,13 @@ import kpi_utils as K
 
 #====== [START] CELL 3 ======
 
-tz = pytz.timezone('Asia/Singapore')  # or 'Asia/Shanghai', etc.
-now_utc8 = datetime.now(tz)
+# tz = pytz.timezone('Asia/Singapore')  # or 'Asia/Shanghai', etc.
+# now_utc8 = datetime.now(tz)
 
-# Get last year
-last_year = now_utc8.year - 1
+# # Get last year
+# last_year = now_utc8.year - 1
 
-print(last_year)
+# print(last_year)
 
 #====== [END] CELL 3 ======
 
@@ -131,15 +131,15 @@ LOCATION_WHEN = value_when('location', maps=location_maps, otherwise=True)
 
 #====== [START] CELL 9 ======
 
-silver_accounts = spark.read.table(TABLE('silver_accounts'))
+# silver_accounts = spark.read.table(TABLE('silver_accounts'))
 silver_contact = spark.read.table(TABLE('silver_contact'))
 
 
-silver_agreement = spark.read.table(TABLE('360_silver_agreement'))
+# silver_agreement = spark.read.table(TABLE('360_silver_agreement'))
 
-silver_package = spark.read.table(TABLE('silver_package'))
-silver_invoice_detail = spark.read.table(TABLE('silver_invoice_detail'))
-silver_invoice_header = spark.read.table(TABLE('silver_invoice_header'))
+# silver_package = spark.read.table(TABLE('silver_package'))
+# silver_invoice_detail = spark.read.table(TABLE('silver_invoice_detail'))
+# silver_invoice_header = spark.read.table(TABLE('silver_invoice_header'))
 
 silver_vw_lead_account_modal_2023 = spark.read.table(TABLE('silver_vw_lead_account_modal_2023'))
 
@@ -148,27 +148,27 @@ silver_vw_lead_account_modal_2023 = spark.read.table(TABLE('silver_vw_lead_accou
 
 #====== [START] CELL 10 ======
 
-silver_accounts = silver_accounts.select(
-    'ref_id',
-    'id',
-    'region',
-    'guest_status',
-    'success_date',
-    ).filter(F.col('success_date').isNotNull() & (F.col('guest_status') == 'Success'))
+# silver_accounts = silver_accounts.select(
+#     'ref_id',
+#     'id',
+#     'region',
+#     'guest_status',
+#     'success_date',
+#     ).filter(F.col('success_date').isNotNull() & (F.col('guest_status') == 'Success'))
 
-silver_accounts = (
-    silver_accounts
-    .withColumn('min_success_date', F.min('success_date').over(Window.partitionBy('ref_id').orderBy('success_date')))
-    .filter(F.col('success_date') == F.col('min_success_date'))
-    .drop('min_success_date')
-)
+# silver_accounts = (
+#     silver_accounts
+#     .withColumn('min_success_date', F.min('success_date').over(Window.partitionBy('ref_id').orderBy('success_date')))
+#     .filter(F.col('success_date') == F.col('min_success_date'))
+#     .drop('min_success_date')
+# )
 
-silver_contact = silver_contact.select(
-    'bk', 
-    'source',
-    'id',
-    'ext_ref_contact_id',
-    )
+# silver_contact = silver_contact.select(
+#     'bk',
+#     'source',
+#     'id',
+#     'ext_ref_contact_id',
+#     )
 
 #====== [END] CELL 10 ======
 
@@ -192,22 +192,22 @@ silver_contact = silver_contact.select(
 #     .dropDuplicates()
 # )
 
-accounts_nmu_ym = (
-    silver_vw_lead_account_modal_2023.alias('lead_account')
-    .join(
-        silver_contact.alias('contact'),
-        F.concat(F.col('lead_account.final_region'), F.col('lead_account.account_id')) == F.concat(F.col('contact.source'), F.col('contact.ext_ref_contact_id')),
-        'left'
-    )
-    .select(
-        F.concat(F.col('contact.source'), F.col('contact.ext_ref_contact_id')).alias('dim_contact_key'),
-        # F.col('accounts.id').alias('dim_accounts_id'),
-        F.col('lead_account.final_region').alias('region'),
-        F.col('lead_account.success_date').alias('success_date'),
-        F.date_format(F.col('success_date'), 'yyyyMM').alias('NMU_ym'),
-    )
-    .dropDuplicates()
-)
+# accounts_nmu_ym = (
+#     silver_contact.alias('contact')
+#     .join(
+#         silver_accounts.alias('accounts'),
+#         F.concat(F.col('accounts.region'), F.col('accounts.ref_id')) == F.concat(F.col('contact.source'), F.col('contact.ext_ref_contact_id')),
+#         'left'
+#     )
+#     .select(
+#         F.concat(F.col('contact.source'), F.col('contact.id').cast('bigint')).alias('dim_contact_key'),
+#         # F.col('accounts.id').alias('dim_accounts_id'),
+#         F.col('contact.source').alias('region'),
+#         F.col('accounts.success_date').alias('success_date'),
+#         F.date_format(F.col('success_date'), 'yyyyMM').alias('NMU_ym'),
+#     )
+#     .dropDuplicates()
+# )
 
 #====== [END] CELL 11 ======
 
@@ -234,71 +234,71 @@ display(duplicate_dim_contact_key)
 #====== [START] CELL 14 ======
 
 # Read tables
-silver_agreement = spark.read.table(TABLE('360_silver_agreement'))
-silver_package = spark.read.table(TABLE('silver_package'))
-silver_package_type = spark.read.table(TABLE('silver_package_type'))
-silver_package_term = spark.read.table(TABLE('silver_package_term'))
-silver_agreement_status = spark.read.table(TABLE('silver_agreement_status'))
-silver_contact = spark.read.table(TABLE('silver_contact'))
-silver_contact_status = spark.read.table(TABLE('silver_contact_status'))
-silver_360_package = spark.read.table(TABLE('360_silver_package'))
-silver_service = spark.read.table(TABLE('silver_service'))
+# silver_agreement = spark.read.table(TABLE('360_silver_agreement'))
+# silver_package = spark.read.table(TABLE('silver_package'))
+# silver_package_type = spark.read.table(TABLE('silver_package_type'))
+# silver_package_term = spark.read.table(TABLE('silver_package_term'))
+# silver_agreement_status = spark.read.table(TABLE('silver_agreement_status'))
+# silver_contact = spark.read.table(TABLE('silver_contact'))
+# silver_contact_status = spark.read.table(TABLE('silver_contact_status'))
+# silver_360_package = spark.read.table(TABLE('360_silver_package'))
+# silver_service = spark.read.table(TABLE('silver_service'))
 
 #====== [END] CELL 14 ======
 
 
 #====== [START] CELL 15 ======
 
-# 1. Create membership_agreement 
-membership_agreement = (
-    silver_agreement.alias('a')
-    .filter(F.col('a.deleted_at').isNull() & F.col('a.parent_agreement_id').isNull())
-    .join(
-        silver_package.alias('p'),
-        F.concat(F.col('a.source'), F.col('a.package_id').cast('bigint')) == F.concat(F.col('p.source'), F.col('p.id').cast('bigint')),
-        'left'
-    )
-    .select(
-        'a.*',
-        F.col('p.source').alias('p_source'),
-        F.when(
-            (F.col('a.source') == 'HK') & 
-            (F.col('a.package_type_id') == 1) & 
-            (F.col('p.package_sub_type_id').isin(8, 9)), 1
-        ).when(
-            (F.col('a.source') == 'SG') & 
-            (F.col('a.package_type_id') == 1) & 
-            (F.col('p.package_sub_type_id').isin(1, 2)), 1
-        ).when(
-            (F.col('a.source') == 'CN') & 
-            (F.col('a.package_type_id') == 1), 1
-        ).otherwise(0).alias('is_membership')
-    )
-)
+# 1. Create membership_agreement
+# membership_agreement = (
+#     silver_agreement.alias('a')
+#     .filter(F.col('a.deleted_at').isNull() & F.col('a.parent_agreement_id').isNull())
+#     .join(
+#         silver_package.alias('p'),
+#         F.concat(F.col('a.source'), F.col('a.package_id').cast('bigint')) == F.concat(F.col('p.source'), F.col('p.id').cast('bigint')),
+#         'left'
+#     )
+#     .select(
+#         'a.*',
+#         F.col('p.source').alias('p_source'),
+#         F.when(
+#             (F.col('a.source') == 'HK') &
+#             (F.col('a.package_type_id') == 1) &
+#             (F.col('p.package_sub_type_id').isin(8, 9)), 1
+#         ).when(
+#             (F.col('a.source') == 'SG') &
+#             (F.col('a.package_type_id') == 1) &
+#             (F.col('p.package_sub_type_id').isin(1, 2)), 1
+#         ).when(
+#             (F.col('a.source') == 'CN') &
+#             (F.col('a.package_type_id') == 1), 1
+#         ).otherwise(0).alias('is_membership')
+#     )
+# )
 
 #====== [END] CELL 15 ======
 
 
 #====== [START] CELL 16 ======
 
-# 2. Create previous_agreement 
-previous_agreement = (
-    membership_agreement
-    .filter(F.col('deleted_at').isNull() & (F.col('is_membership') == 1))
-    .select(
-        'source',
-        'bk',
-        'id',
-        'contact_id',
-        F.concat('source', 'contact_id').alias('dim_client_key'),
-        'signed_date',
-        'start_date',
-        'end_date',
-        'last_workout_date',
-        'package_id',
-        F.coalesce('last_workout_date', 'end_date').alias('prev_gap_reference')
-    )
-)
+# 2. Create previous_agreement
+# previous_agreement = (
+#     membership_agreement
+#     .filter(F.col('deleted_at').isNull() & (F.col('is_membership') == 1))
+#     .select(
+#         'source',
+#         'bk',
+#         'id',
+#         'contact_id',
+#         F.concat('source', 'contact_id').alias('dim_client_key'),
+#         'signed_date',
+#         'start_date',
+#         'end_date',
+#         'last_workout_date',
+#         'package_id',
+#         F.coalesce('last_workout_date', 'end_date').alias('prev_gap_reference')
+#     )
+# )
 
 #====== [END] CELL 16 ======
 
@@ -308,20 +308,20 @@ previous_agreement = (
 # 3. Create first_agreement  
 # first_agreement_window = Window.partitionBy(F.concat(F.col('source'), F.col('contact_id'))).orderBy(F.coalesce('signed_date', 'start_date'))
 # first_agreement_window = Window.partitionBy('source', 'contact_id').orderBy(F.coalesce('signed_date', 'start_date'))
-first_agreement_window = Window.partitionBy('source', 'contact_id').orderBy('start_date', F.col('id').cast('bigint'))
+# first_agreement_window = Window.partitionBy('source', 'contact_id').orderBy('start_date', F.col('id').cast('bigint'))
 
-first_agreement_df = (
-    membership_agreement
-    .filter(
-        F.col('deleted_at').isNull() & 
-        (F.col('package_type_id') == 1) & 
-        F.col('parent_agreement_id').isNull() & 
-        (F.col('is_membership') == 1)
-    )
-    .withColumn('row_num', F.row_number().over(first_agreement_window))
-    .filter(F.col('row_num') == 1)
-    .drop('row_num')
-)
+# first_agreement_df = (
+#     membership_agreement
+#     .filter(
+#         F.col('deleted_at').isNull() &
+#         (F.col('package_type_id') == 1) &
+#         F.col('parent_agreement_id').isNull() &
+#         (F.col('is_membership') == 1)
+#     )
+#     .withColumn('row_num', F.row_number().over(first_agreement_window))
+#     .filter(F.col('row_num') == 1)
+#     .drop('row_num')
+# )
 
 #====== [END] CELL 17 ======
 
@@ -344,32 +344,32 @@ first_agreement_df = (
 # 4. Create prev_agreement
 # prev_agreement_window = Window.partitionBy('ma.bk', 'ma.source', 'ma.contact_id').orderBy(F.coalesce('pa.signed_date', 'pa.start_date').desc())
 # prev_agreement_window = Window.partitionBy('ma.bk').orderBy(F.coalesce('pa.signed_date', 'pa.start_date').desc())
-prev_agreement_window = Window.partitionBy('ma.bk').orderBy(F.col('pa.start_date').desc(), F.col('pa.id').cast('bigint').desc())
+# prev_agreement_window = Window.partitionBy('ma.bk').orderBy(F.col('pa.start_date').desc(), F.col('pa.id').cast('bigint').desc())
 
-prev_agreement_df = (
-    membership_agreement.alias('ma')
-    .join(
-        previous_agreement.alias('pa'),
-        (F.concat(F.col('ma.source'), F.col('ma.contact_id').cast('bigint')) == F.concat(F.col('pa.source'), F.col('pa.contact_id').cast('bigint'))) &
-        (F.col('pa.prev_gap_reference') < F.col('ma.start_date')), 
-        'left'
-    )
-    .withColumn('row_num', F.row_number().over(prev_agreement_window))
-    # .filter(F.col('row_num') == 1)
-    .select(
-        F.col('ma.bk').alias('fct_agreement_bk'),
-        F.col('pa.source').alias('source'),
-        F.col('pa.bk').alias('bk'),
-        F.col('pa.contact_id').alias('contact_id'),
-        F.col('pa.dim_client_key').alias('dim_client_key'),
-        F.col('pa.signed_date').alias('signed_date'),
-        F.col('pa.start_date').alias('start_date'),
-        F.col('pa.end_date').alias('end_date'),
-        F.col('pa.last_workout_date').alias('last_workout_date'),
-        F.col('pa.package_id').alias('package_id'),
-        F.col('pa.prev_gap_reference').alias('prev_gap_reference'),
-    )
-)
+# prev_agreement_df = (
+#     membership_agreement.alias('ma')
+#     .join(
+#         previous_agreement.alias('pa'),
+#         (F.concat(F.col('ma.source'), F.col('ma.contact_id').cast('bigint')) == F.concat(F.col('pa.source'), F.col('pa.contact_id').cast('bigint'))) &
+#         (F.col('pa.prev_gap_reference') < F.col('ma.start_date')),
+#         'left'
+#     )
+#     .withColumn('row_num', F.row_number().over(prev_agreement_window))
+#     .filter(F.col('row_num') == 1)
+#     .select(
+#         F.col('ma.bk').alias('fct_agreement_bk'),
+#         F.col('pa.source').alias('source'),
+#         F.col('pa.bk').alias('bk'),
+#         F.col('pa.contact_id').alias('contact_id'),
+#         F.col('pa.dim_client_key').alias('dim_client_key'),
+#         F.col('pa.signed_date').alias('signed_date'),
+#         F.col('pa.start_date').alias('start_date'),
+#         F.col('pa.end_date').alias('end_date'),
+#         F.col('pa.last_workout_date').alias('last_workout_date'),
+#         F.col('pa.package_id').alias('package_id'),
+#         F.col('pa.prev_gap_reference').alias('prev_gap_reference'),
+#     )
+# )
 
 # prev_agreement_df.filter(F.col('fct_agreement_bk') == "SG625702").filter(F.col('contact_id') == "139293").display()
 
@@ -379,79 +379,79 @@ prev_agreement_df = (
 
 #====== [START] CELL 20 ======
 
-# 5. Joining 
-join_agreement = (
-    membership_agreement.alias('agreement')
-    .join(
-        silver_360_package.alias('package'),
-        F.concat(F.col('agreement.source'), F.col('agreement.package_id')) == F.col('package.bk'),
-        'left'
-    )
-    .join(
-        silver_package_type.alias('package_type'),
-        F.concat(F.col('package.source'), F.col('package.package_type_id')) == F.col('package_type.bk'),
-        'left'
-    )
-    .join(
-        silver_package_term.alias('package_term'),
-        F.concat(F.col('package.source'), F.col('package.package_term_id')) == F.col('package_term.bk'),
-        'left'
-    )
-    .join(
-        first_agreement_df.alias('first_agreement'),
-        F.col('agreement.bk') == F.col('first_agreement.bk'),
-        'left'
-    )
-    .join(
-        prev_agreement_df.alias('prev_agreement'),
-        F.col('agreement.bk') == F.col('prev_agreement.fct_agreement_bk'),
-        'left'
-    )
-    .join(
-        silver_agreement_status.alias('agreement_status'),
-        (F.col('agreement.source') == F.col('agreement_status.source')) & 
-        (F.col('agreement.agreement_status_id') == F.col('agreement_status.id')),
-        'left'
-    )
-    .join(
-        silver_contact.alias('contact'),
-        F.concat(F.col('agreement.source'), F.col('agreement.contact_id')) == F.col('contact.bk'),
-        'left'
-    )
-    .join(
-        silver_contact_status.alias('contact_status'),
-        F.concat(F.col('contact.source'), F.col('contact.contact_status_id')) == F.col('contact_status.bk'),
-        'left'
-    )
-    .join(
-        membership_agreement.alias('old_agreement'),
-        F.concat(F.col('agreement.source'), F.col('agreement.from_agreement_id').cast('bigint')) == F.col('old_agreement.bk'),
-        'left'
-    )
-    .join(
-        silver_360_package.alias('prev_package'),
-        F.concat(F.col('prev_agreement.source'), F.col('prev_agreement.package_id')) == F.col('prev_package.bk'),
-        'left'
-    )
-    .join(
-        silver_360_package.alias('old_package'),
-        F.concat(F.col('old_agreement.source'), F.col('old_agreement.package_id')) == F.col('old_package.bk'),
-        'left'
-    )
-    .join(
-        silver_package_term.alias('old_package_term'),
-        F.concat(F.col('old_package.source'), F.col('old_package.package_term_id')) == F.col('old_package_term.bk'),
-        'left'
-    )
-    .join(
-        silver_service.alias('service'),
-        F.concat(F.col('package.source'), F.col('package.ext_ref_package_id')) == F.concat(F.col('service.source'), F.col('service.service_id')),
-        'left'
-    )
-    .filter(
-        F.col('agreement.ext_ref_agreement_id').isNotNull()
-    )
-)
+# 5. Joining
+# join_agreement = (
+#     membership_agreement.alias('agreement')
+#     .join(
+#         silver_360_package.alias('package'),
+#         F.concat(F.col('agreement.source'), F.col('agreement.package_id')) == F.col('package.bk'),
+#         'left'
+#     )
+#     .join(
+#         silver_package_type.alias('package_type'),
+#         F.concat(F.col('package.source'), F.col('package.package_type_id')) == F.col('package_type.bk'),
+#         'left'
+#     )
+#     .join(
+#         silver_package_term.alias('package_term'),
+#         F.concat(F.col('package.source'), F.col('package.package_term_id')) == F.col('package_term.bk'),
+#         'left'
+#     )
+#     .join(
+#         first_agreement_df.alias('first_agreement'),
+#         F.col('agreement.bk') == F.col('first_agreement.bk'),
+#         'left'
+#     )
+#     .join(
+#         prev_agreement_df.alias('prev_agreement'),
+#         F.col('agreement.bk') == F.col('prev_agreement.fct_agreement_bk'),
+#         'left'
+#     )
+#     .join(
+#         silver_agreement_status.alias('agreement_status'),
+#         (F.col('agreement.source') == F.col('agreement_status.source')) &
+#         (F.col('agreement.agreement_status_id') == F.col('agreement_status.id')),
+#         'left'
+#     )
+#     .join(
+#         silver_contact.alias('contact'),
+#         F.concat(F.col('agreement.source'), F.col('agreement.contact_id')) == F.col('contact.bk'),
+#         'left'
+#     )
+#     .join(
+#         silver_contact_status.alias('contact_status'),
+#         F.concat(F.col('contact.source'), F.col('contact.contact_status_id')) == F.col('contact_status.bk'),
+#         'left'
+#     )
+#     .join(
+#         membership_agreement.alias('old_agreement'),
+#         F.concat(F.col('agreement.source'), F.col('agreement.from_agreement_id').cast('bigint')) == F.col('old_agreement.bk'),
+#         'left'
+#     )
+#     .join(
+#         silver_360_package.alias('prev_package'),
+#         F.concat(F.col('prev_agreement.source'), F.col('prev_agreement.package_id')) == F.col('prev_package.bk'),
+#         'left'
+#     )
+#     .join(
+#         silver_360_package.alias('old_package'),
+#         F.concat(F.col('old_agreement.source'), F.col('old_agreement.package_id')) == F.col('old_package.bk'),
+#         'left'
+#     )
+#     .join(
+#         silver_package_term.alias('old_package_term'),
+#         F.concat(F.col('old_package.source'), F.col('old_package.package_term_id')) == F.col('old_package_term.bk'),
+#         'left'
+#     )
+#     .join(
+#         silver_service.alias('service'),
+#         F.concat(F.col('package.source'), F.col('package.ext_ref_package_id')) == F.concat(F.col('service.source'), F.col('service.service_id')),
+#         'left'
+#     )
+#     .filter(
+#         F.col('agreement.ext_ref_agreement_id').isNotNull()
+#     )
+# )
 
 #====== [END] CELL 20 ======
 
@@ -459,108 +459,108 @@ join_agreement = (
 #====== [START] CELL 21 ======
 
 # Final transformations and calculations for all the required fields
-fct_agreement = join_agreement.select(
-    F.col("agreement.bk").cast("string").alias("fct_agreement_key"),
-    F.col("agreement.source").cast("string").alias("source"),
-    F.concat(F.col("agreement.source"), F.col("agreement.from_agreement_id").cast("bigint")).cast("string").alias("from_agreement_key"),
-    F.col("prev_agreement.bk").cast("string").alias("prev_agreement_key"),
-    F.concat(F.col("agreement.source"), F.col("agreement.package_id")).cast("string").alias("dim_package_key"),
-    F.concat(F.col("agreement.source"), F.col("agreement.contact_id")).cast("string").alias("dim_contact_key"),
-    F.concat(F.col("agreement.source"), F.col("agreement.revenue_location_id")).cast("string").alias("dim_revenue_location_key"),
-    F.from_utc_timestamp(
-        F.from_unixtime(F.col("agreement.created_at") / 1000), 
-        "Asia/Shanghai"
-    ).cast("timestamp").alias("agreement_start_date"),
-    F.date_format(
-        F.from_utc_timestamp(F.from_unixtime(F.col("agreement.created_at") / 1000), "Asia/Shanghai"), 
-        "yyyyMMdd"
-    ).cast("string").alias("agreement_start_date_key"),
-    F.col("agreement.agreement_no").cast("string").alias("agreement_no"),
-    F.col("agreement.min_committed_month").cast("int").alias("min_committed_month"),
-    F.col("agreement.first_month_fee").cast("decimal(18,4)").alias("first_month_fee"),
-    F.col("agreement.last_month_fee").cast("decimal(18,4)").alias("last_month_fee"),
-    F.col("agreement.prorata_fee").cast("decimal(18,4)").alias("prorata_fee"),
-    F.col("agreement.prepaid_fee").cast("decimal(18,4)").alias("prepaid_fee"),
-    F.col("agreement.joining_fee").cast("decimal(18,4)").alias("joining_fee"),
-    F.col("agreement.monthly_fee").cast("decimal(18,4)").alias("monthly_fee"),
-    F.col("agreement.start_date").cast("timestamp").alias("start_date"),
-    F.col("agreement.end_date").cast("timestamp").alias("end_date"),
-    F.col("agreement.signed_date").cast("timestamp").alias("signed_date"),
-    F.col("agreement.last_workout_date").cast("timestamp").alias("last_workout_date"),
-    F.col("package.service_category_id").cast("bigint").alias("service_category_id"),
-    F.col("package.package_sub_type_id").cast("decimal(38,18)").alias("package_sub_type_id"),
-    F.col("service.service_name").cast("string").alias("service_name"),
-    F.col("agreement.from_agreement_id").cast("decimal(38,18)").alias("from_agreement_id"),
-    F.col("agreement.end_date").cast("timestamp").alias("agreement_end_date"),
-    F.date_format(F.col("agreement.end_date"), "yyyyMMdd").cast("string").alias("agreement_end_date_key"),
-    F.concat(F.col("agreement.source"), F.col("agreement.ext_ref_agreement_id")).cast("string").alias("ext_ref_agreement_id"),
-    F.col("agreement.package_id").cast("bigint").alias("package_id"),
-    F.col("package_type.name").cast("string").alias("package_type_name"),
-    F.col("package_term.name").cast("string").alias("package_term_name"),
-    F.col("agreement_status.bk").cast("string").alias("dim_agreement_status_key"),
-    F.col("contact_status.status_360").cast("string").alias("contact_status"),
-    F.when(F.col("agreement.total_session") >= 99999, 1).otherwise(0).cast("int").alias("is_unlimited"),
-    F.datediff(F.col("agreement.start_date"), F.col("prev_agreement.prev_gap_reference")).cast("int").alias("gap_days"),
-    F.when(F.col("package.package_type_id") != 1, None)
-        .when(F.col("first_agreement.bk") == F.col("agreement.bk"), "New")
-        .when(F.col("agreement.from_agreement_id").isNotNull(), "Upgrade")
-        .when(
-            (F.datediff(F.col("agreement.start_date"), F.col("prev_agreement.prev_gap_reference")) > 1) &
-            (F.datediff(F.col("agreement.start_date"), F.col("prev_agreement.prev_gap_reference")) <= 90)       # updated on 2025.08.21. Added
-            , "Rejoin"
-        ).when(F.datediff(F.col("agreement.start_date"), F.col("prev_agreement.prev_gap_reference")) <= 1, "Renew")
-        .otherwise("New").cast("string").alias("agreement_status_type"),                                        # updated on 2025.08.21. Renew -> New
-    F.col("prev_agreement.prev_gap_reference").cast("timestamp").alias("prev_gap_reference"),
-    F.when(
-        (F.col("agreement.from_agreement_id").isNotNull()) &
-        (F.col("package_term.id") == 1) &
-        (F.col("old_package_term.id") == 2),
-        "Upgrade prepaid to due"
-    ).when(
-        (F.col("agreement.from_agreement_id").isNotNull()) &
-        (F.col("package_term.id") == 2) &
-        (F.col("old_package_term.id") == 2),
-        "Upgrade prepaid to prepaid"
-    ).when(
-        (F.col("agreement.from_agreement_id").isNotNull()) &
-        (F.col("package_term.id") == 2) &
-        (F.col("old_package_term.id") == 1),
-        "Upgrade due to prepaid"
-    ).when(
-        (F.col("agreement.from_agreement_id").isNotNull()) &
-        (F.col("package_term.id") == 1) &
-        (F.col("old_package_term.id") == 1),
-        "Upgrade due to due"
-    ).when(
-        (F.col("agreement.from_agreement_id").isNull()) &
-        (F.col("package.package_type_id") == 1) &
-        (F.datediff(F.col("agreement.start_date"), F.col("prev_agreement.prev_gap_reference")) <= 1) &
-        (F.col("prev_package.package_term_id") == 2) &
-        (F.col("package.package_term_id") == 2),
-        # (F.col("package.is_renew") == 1),                                                                     # updated on 2025.08.21. Removed
-        "Renew prepaid to prepaid renew"
-    ).when(
-        (F.col("agreement.from_agreement_id").isNull()) &
-        (F.col("package.package_type_id") == 1) &
-        (F.datediff(F.col("agreement.start_date"), F.col("prev_agreement.prev_gap_reference")) <= 1) &
-        (F.col("package.package_term_id") == 2),
-        # (F.col("package.is_renew") == 1),                                                                     # updated on 2025.08.21. Removed
-        "Renew prepaid"
-    ).when(
-        (F.col("agreement.from_agreement_id").isNull()) &
-        (F.col("package.package_type_id") == 1) &
-        (F.datediff(F.col("agreement.start_date"), F.col("prev_agreement.prev_gap_reference")) > 1) &
-        (F.datediff(F.col("agreement.start_date"), F.col("prev_agreement.prev_gap_reference")) <=90) &          # updated on 2025.08.21. Added
-        (F.col("prev_package.package_term_id") == 2) &
-        (F.col("package.package_term_id") == 2),
-        # (F.col("package.is_renew") == 1),                                                                     # updated on 2025.08.21. Removed
-        "Rejoin prepaid to prepaid renew"
-    ).otherwise("Unknown").cast("string").alias("agreement_status_group")
-).orderBy(
-    'dim_contact_key', 
-    'agreement.start_date', 
-    'agreement.signed_date'
-)
+# fct_agreement = join_agreement.select(
+#     F.col("agreement.bk").cast("string").alias("fct_agreement_key"),
+#     F.col("agreement.source").cast("string").alias("source"),
+#     F.concat(F.col("agreement.source"), F.col("agreement.from_agreement_id").cast("bigint")).cast("string").alias("from_agreement_key"),
+#     F.col("prev_agreement.bk").cast("string").alias("prev_agreement_key"),
+#     F.concat(F.col("agreement.source"), F.col("agreement.package_id")).cast("string").alias("dim_package_key"),
+#     F.concat(F.col("agreement.source"), F.col("agreement.contact_id")).cast("string").alias("dim_contact_key"),
+#     F.concat(F.col("agreement.source"), F.col("agreement.revenue_location_id")).cast("string").alias("dim_revenue_location_key"),
+#     F.from_utc_timestamp(
+#         F.from_unixtime(F.col("agreement.created_at") / 1000),
+#         "Asia/Shanghai"
+#     ).cast("timestamp").alias("agreement_start_date"),
+#     F.date_format(
+#         F.from_utc_timestamp(F.from_unixtime(F.col("agreement.created_at") / 1000), "Asia/Shanghai"),
+#         "yyyyMMdd"
+#     ).cast("string").alias("agreement_start_date_key"),
+#     F.col("agreement.agreement_no").cast("string").alias("agreement_no"),
+#     F.col("agreement.min_committed_month").cast("int").alias("min_committed_month"),
+#     F.col("agreement.first_month_fee").cast("decimal(18,4)").alias("first_month_fee"),
+#     F.col("agreement.last_month_fee").cast("decimal(18,4)").alias("last_month_fee"),
+#     F.col("agreement.prorata_fee").cast("decimal(18,4)").alias("prorata_fee"),
+#     F.col("agreement.prepaid_fee").cast("decimal(18,4)").alias("prepaid_fee"),
+#     F.col("agreement.joining_fee").cast("decimal(18,4)").alias("joining_fee"),
+#     F.col("agreement.monthly_fee").cast("decimal(18,4)").alias("monthly_fee"),
+#     F.col("agreement.start_date").cast("timestamp").alias("start_date"),
+#     F.col("agreement.end_date").cast("timestamp").alias("end_date"),
+#     F.col("agreement.signed_date").cast("timestamp").alias("signed_date"),
+#     F.col("agreement.last_workout_date").cast("timestamp").alias("last_workout_date"),
+#     F.col("package.service_category_id").cast("bigint").alias("service_category_id"),
+#     F.col("package.package_sub_type_id").cast("decimal(38,18)").alias("package_sub_type_id"),
+#     F.col("service.service_name").cast("string").alias("service_name"),
+#     F.col("agreement.from_agreement_id").cast("decimal(38,18)").alias("from_agreement_id"),
+#     F.col("agreement.end_date").cast("timestamp").alias("agreement_end_date"),
+#     F.date_format(F.col("agreement.end_date"), "yyyyMMdd").cast("string").alias("agreement_end_date_key"),
+#     F.concat(F.col("agreement.source"), F.col("agreement.ext_ref_agreement_id")).cast("string").alias("ext_ref_agreement_id"),
+#     F.col("agreement.package_id").cast("bigint").alias("package_id"),
+#     F.col("package_type.name").cast("string").alias("package_type_name"),
+#     F.col("package_term.name").cast("string").alias("package_term_name"),
+#     F.col("agreement_status.bk").cast("string").alias("dim_agreement_status_key"),
+#     F.col("contact_status.status_360").cast("string").alias("contact_status"),
+#     F.when(F.col("agreement.total_session") >= 99999, 1).otherwise(0).cast("int").alias("is_unlimited"),
+#     F.datediff(F.col("agreement.start_date"), F.col("prev_agreement.prev_gap_reference")).cast("int").alias("gap_days"),
+#     F.when(F.col("package.package_type_id") != 1, None)
+#         .when(F.col("first_agreement.bk") == F.col("agreement.bk"), "New")
+#         .when(F.col("agreement.from_agreement_id").isNotNull(), "Upgrade")
+#         .when(
+#             (F.datediff(F.col("agreement.start_date"), F.col("prev_agreement.prev_gap_reference")) > 1) &
+#             (F.datediff(F.col("agreement.start_date"), F.col("prev_agreement.prev_gap_reference")) <= 90)       # updated on 2025.08.21. Added
+#             , "Rejoin"
+#         ).when(F.datediff(F.col("agreement.start_date"), F.col("prev_agreement.prev_gap_reference")) <= 1, "Renew")
+#         .otherwise("New").cast("string").alias("agreement_status_type"),                                        # updated on 2025.08.21. Renew -> New
+#     F.col("prev_agreement.prev_gap_reference").cast("timestamp").alias("prev_gap_reference"),
+#     F.when(
+#         (F.col("agreement.from_agreement_id").isNotNull()) &
+#         (F.col("package_term.id") == 1) &
+#         (F.col("old_package_term.id") == 2),
+#         "Upgrade prepaid to due"
+#     ).when(
+#         (F.col("agreement.from_agreement_id").isNotNull()) &
+#         (F.col("package_term.id") == 2) &
+#         (F.col("old_package_term.id") == 2),
+#         "Upgrade prepaid to prepaid"
+#     ).when(
+#         (F.col("agreement.from_agreement_id").isNotNull()) &
+#         (F.col("package_term.id") == 2) &
+#         (F.col("old_package_term.id") == 1),
+#         "Upgrade due to prepaid"
+#     ).when(
+#         (F.col("agreement.from_agreement_id").isNotNull()) &
+#         (F.col("package_term.id") == 1) &
+#         (F.col("old_package_term.id") == 1),
+#         "Upgrade due to due"
+#     ).when(
+#         (F.col("agreement.from_agreement_id").isNull()) &
+#         (F.col("package.package_type_id") == 1) &
+#         (F.datediff(F.col("agreement.start_date"), F.col("prev_agreement.prev_gap_reference")) <= 1) &
+#         (F.col("prev_package.package_term_id") == 2) &
+#         (F.col("package.package_term_id") == 2),
+#         # (F.col("package.is_renew") == 1),                                                                     # updated on 2025.08.21. Removed
+#         "Renew prepaid to prepaid renew"
+#     ).when(
+#         (F.col("agreement.from_agreement_id").isNull()) &
+#         (F.col("package.package_type_id") == 1) &
+#         (F.datediff(F.col("agreement.start_date"), F.col("prev_agreement.prev_gap_reference")) <= 1) &
+#         (F.col("package.package_term_id") == 2),
+#         # (F.col("package.is_renew") == 1),                                                                     # updated on 2025.08.21. Removed
+#         "Renew prepaid"
+#     ).when(
+#         (F.col("agreement.from_agreement_id").isNull()) &
+#         (F.col("package.package_type_id") == 1) &
+#         (F.datediff(F.col("agreement.start_date"), F.col("prev_agreement.prev_gap_reference")) > 1) &
+#         (F.datediff(F.col("agreement.start_date"), F.col("prev_agreement.prev_gap_reference")) <=90) &          # updated on 2025.08.21. Added
+#         (F.col("prev_package.package_term_id") == 2) &
+#         (F.col("package.package_term_id") == 2),
+#         # (F.col("package.is_renew") == 1),                                                                     # updated on 2025.08.21. Removed
+#         "Rejoin prepaid to prepaid renew"
+#     ).otherwise("Unknown").cast("string").alias("agreement_status_group")
+# ).orderBy(
+#     'dim_contact_key',
+#     'agreement.start_date',
+#     'agreement.signed_date'
+# )
 
 
 
@@ -575,16 +575,16 @@ fct_agreement = join_agreement.select(
 
 # fct_agreement = spark.read.table(TABLE('360_fct_agreement'))
 # fct_agreement = spark.read.table(LEG_TABLE('fct_360_agreement'))
-dim_location_360f = spark.read.table(TABLE('dim_location_360f'))
+# dim_location_360f = spark.read.table(TABLE('dim_location_360f'))
 
 
-silver_invoice_detail = spark.read.table(TABLE('silver_invoice_detail'))
-silver_invoice_header = spark.read.table(TABLE('silver_invoice_header'))
-silver_invoice_category = spark.read.table(TABLE('silver_invoice_category'))
-silver_package = spark.read.table(TABLE('360_silver_package'))
-silver_package_sub_type = spark.read.table(TABLE('silver_package_sub_type'))
-silver_package_book_limit_line = spark.read.table(TABLE('silver_package_book_limit_line'))
-silver_location = spark.read.table(TABLE('silver_location'))
+# silver_invoice_detail = spark.read.table(TABLE('silver_invoice_detail'))
+# silver_invoice_header = spark.read.table(TABLE('silver_invoice_header'))
+# silver_invoice_category = spark.read.table(TABLE('silver_invoice_category'))
+# silver_package = spark.read.table(TABLE('360_silver_package'))
+# silver_package_sub_type = spark.read.table(TABLE('silver_package_sub_type'))
+# silver_package_book_limit_line = spark.read.table(TABLE('silver_package_book_limit_line'))
+# silver_location = spark.read.table(TABLE('silver_location'))
 
 
 
@@ -593,60 +593,60 @@ silver_location = spark.read.table(TABLE('silver_location'))
 
 #====== [START] CELL 24 ======
 
-prev_agt_invoice_df = (
-    silver_invoice_detail
-    .filter(F.col('item_type') == 'agreement')
-    .withColumn("row_num", F.row_number().over(Window.partitionBy("item_id").orderBy(F.desc("created_at"))))
-    .filter("row_num = 1")
-)
+# prev_agt_invoice_df = (
+#     silver_invoice_detail
+#     .filter(F.col('item_type') == 'agreement')
+#     .withColumn("row_num", F.row_number().over(Window.partitionBy("item_id").orderBy(F.desc("created_at"))))
+#     .filter("row_num = 1")
+# )
 
-upgrade_agt_invoice_df = (
-    silver_invoice_detail
-    .filter(F.col('item_type') == 'agreement')
-    .withColumn("row_num", F.row_number().over(Window.partitionBy("item_id").orderBy(F.desc("created_at"))))
-    .filter("row_num = 1")
-)
+# upgrade_agt_invoice_df = (
+#     silver_invoice_detail
+#     .filter(F.col('item_type') == 'agreement')
+#     .withColumn("row_num", F.row_number().over(Window.partitionBy("item_id").orderBy(F.desc("created_at"))))
+#     .filter("row_num = 1")
+# )
 
-# updated on 2025.08.21. Added
-pos_discount_rounding_df = (
-    silver_invoice_detail.alias("id")
-    .filter(F.col("active") == 1)
-    .filter(F.col("item_type") == "product")
-    .join(
-        silver_invoice_category.alias("ic").filter(F.col("active") == 1).filter(F.col("ic.name").isin(["Others", "Rounding"])),
-        F.concat(F.col("id.source"), F.col("id.invoice_category_id").cast("bigint")) == F.concat(F.col("ic.source"), F.col("ic.id").cast("bigint")),
-        "inner"
-    )
-    .groupBy("id.invoice_header_id", "id.source")
-    .agg(F.sum("id.amount").cast(DecimalType(18, 4)).alias("amount"))
-    .withColumn("invoice_header_bk", F.concat(F.col("source"), F.col("invoice_header_id").cast("bigint")))
-    .filter(F.col("amount") < F.lit(0).cast(DecimalType(18, 4)))
-    .select("invoice_header_bk", "amount")
-)
+# # updated on 2025.08.21. Added
+# pos_discount_rounding_df = (
+#     silver_invoice_detail.alias("id")
+#     .filter(F.col("active") == 1)
+#     .filter(F.col("item_type") == "product")
+#     .join(
+#         silver_invoice_category.alias("ic").filter(F.col("active") == 1).filter(F.col("ic.name").isin(["Others", "Rounding"])),
+#         F.concat(F.col("id.source"), F.col("id.invoice_category_id").cast("bigint")) == F.concat(F.col("ic.source"), F.col("ic.id").cast("bigint")),
+#         "inner"
+#     )
+#     .groupBy("id.invoice_header_id", "id.source")
+#     .agg(F.sum("id.amount").cast(DecimalType(18, 4)).alias("amount"))
+#     .withColumn("invoice_header_bk", F.concat(F.col("source"), F.col("invoice_header_id").cast("bigint")))
+#     .filter(F.col("amount") < F.lit(0).cast(DecimalType(18, 4)))
+#     .select("invoice_header_bk", "amount")
+# )
 
-raw_invoice_df = (
-    silver_invoice_detail.alias("id")
-    .filter(F.col("active") == 1)
-    .join(
-        silver_invoice_category.alias("ic").filter(~F.col("ic.name").isin(["Others", "Rounding"])),
-        F.concat(F.col("id.source"), F.col("id.invoice_category_id").cast("bigint")) == F.concat(F.col("ic.source"), F.col("ic.id").cast("bigint")),
-        "inner"
-    )
-    .groupBy("id.invoice_header_id", "id.source")
-    .agg(F.sum("id.amount").cast(DecimalType(18, 4)).alias("raw_amount"))
-    .withColumn("invoice_header_bk", F.concat(F.col("source"), F.col("invoice_header_id").cast("bigint")))
-    .select("invoice_header_bk", "raw_amount")
-)
+# raw_invoice_df = (
+#     silver_invoice_detail.alias("id")
+#     .filter(F.col("active") == 1)
+#     .join(
+#         silver_invoice_category.alias("ic").filter(~F.col("ic.name").isin(["Others", "Rounding"])),
+#         F.concat(F.col("id.source"), F.col("id.invoice_category_id").cast("bigint")) == F.concat(F.col("ic.source"), F.col("ic.id").cast("bigint")),
+#         "inner"
+#     )
+#     .groupBy("id.invoice_header_id", "id.source")
+#     .agg(F.sum("id.amount").cast(DecimalType(18, 4)).alias("raw_amount"))
+#     .withColumn("invoice_header_bk", F.concat(F.col("source"), F.col("invoice_header_id").cast("bigint")))
+#     .select("invoice_header_bk", "raw_amount")
+# )
 
-reverse_invoice_df = (
-    silver_invoice_detail
-    .filter(F.col("item_type") == "invoice_header")
-    .filter(F.col("active") == 1)
-    .groupBy("source", "item_id")
-    .agg(F.sum("amount").alias("reverse_amount"))
-    .withColumn("reverse_invoice_header_bk", F.concat(F.col("source"), F.col("item_id").cast("bigint")))
-    .select("reverse_invoice_header_bk", "reverse_amount")
-)
+# reverse_invoice_df = (
+#     silver_invoice_detail
+#     .filter(F.col("item_type") == "invoice_header")
+#     .filter(F.col("active") == 1)
+#     .groupBy("source", "item_id")
+#     .agg(F.sum("amount").alias("reverse_amount"))
+#     .withColumn("reverse_invoice_header_bk", F.concat(F.col("source"), F.col("item_id").cast("bigint")))
+#     .select("reverse_invoice_header_bk", "reverse_amount")
+# )
 
 
 #====== [END] CELL 24 ======
@@ -654,310 +654,310 @@ reverse_invoice_df = (
 
 #====== [START] CELL 25 ======
 
-join_membership_sales = (
-    fct_agreement.alias("a") 
-    .join(
-        silver_invoice_detail.alias("e"),
-        (F.concat(F.col("e.source"), F.col("e.item_id").cast("bigint")) == F.col("a.fct_agreement_key")) &
-        (F.col("e.item_type") == "agreement") &
-        (F.col("e.active") == 1),              # updated on 2025.08.21. Added
-        "inner"
-    ) 
-    .join(
-        silver_invoice_header.alias("ih"),
-        (F.concat(F.col("e.source"), F.col("e.invoice_header_id").cast("bigint")) == F.concat(F.col("ih.source"), F.col("ih.id").cast("bigint"))) &
-        (F.col("e.active") == 1),              # updated on 2025.08.21. Added
-        "left"
-    ) 
-    .join(
-        silver_invoice_category.alias("ic"),
-        F.concat(F.col("e.source"), F.col("e.invoice_category_id").cast("bigint")) == F.concat(F.col("ic.source"), F.col("ic.id").cast("bigint")),
-        "left"
-    ) 
-    .join(
-        silver_package.alias("b"),
-        F.col("a.dim_package_key") == F.col("b.bk"),
-        "left"
-    ) 
-    .join(
-        silver_package_sub_type.alias("pst"),
-        F.concat(F.col("b.source"), F.col("b.package_sub_type_id").cast("bigint")) == F.col("pst.bk"),
-        "left"
-    ) 
-    .join(
-        silver_package_book_limit_line.alias("c"),
-        F.col("a.package_id") == F.col("c.package_id"),
-        "left"
-    ) 
-    .join(
-        silver_location.alias("f"),
-        F.col("a.dim_revenue_location_key") == F.col("f.bk"),
-        "left"
-    ) 
-    .join(
-        dim_location_360f.alias("loc_f"),
-        F.col("loc_f.dim_location_360f_key") == F.col("f.bk"),
-        "left"
-    ) 
-    .join(
-        fct_agreement.alias("upgrade_agt"),
-        F.col("upgrade_agt.fct_agreement_key") == F.col("a.from_agreement_key"),
-        "left"
-    ) 
-    .join(
-        fct_agreement.alias("prev_agt"),
-        F.col("prev_agt.fct_agreement_key") == F.col("a.prev_agreement_key"),
-        "left"
-    ) 
-    .join(
-        silver_package_sub_type.alias("prev_agt_pst"),
-        F.concat(F.col("prev_agt.source"), F.col("prev_agt.package_sub_type_id").cast("bigint")) == F.col("prev_agt_pst.bk"),
-        "left"
-    ) 
-    .join(
-        prev_agt_invoice_df.alias("prev_agt_invoice"),
-        F.concat(F.col("prev_agt_invoice.source"), F.col("prev_agt_invoice.item_id").cast("bigint")) == F.col("a.prev_agreement_key"),
-        "left"
-    ) 
-    .join(
-        upgrade_agt_invoice_df.alias("upgrade_agt_invoice"),
-        F.concat(F.col("upgrade_agt_invoice.source"), F.col("upgrade_agt_invoice.item_id").cast("bigint")) == F.col("a.prev_agreement_key"),
-        "left"
-    )
+# join_membership_sales = (
+#     fct_agreement.alias("a")
+#     .join(
+#         silver_invoice_detail.alias("e"),
+#         (F.concat(F.col("e.source"), F.col("e.item_id").cast("bigint")) == F.col("a.fct_agreement_key")) &
+#         (F.col("e.item_type") == "agreement") &
+#         (F.col("e.active") == 1),              # updated on 2025.08.21. Added
+#         "inner"
+#     )
+#     .join(
+#         silver_invoice_header.alias("ih"),
+#         (F.concat(F.col("e.source"), F.col("e.invoice_header_id").cast("bigint")) == F.concat(F.col("ih.source"), F.col("ih.id").cast("bigint"))) &
+#         (F.col("e.active") == 1),              # updated on 2025.08.21. Added
+#         "left"
+#     )
+#     .join(
+#         silver_invoice_category.alias("ic"),
+#         F.concat(F.col("e.source"), F.col("e.invoice_category_id").cast("bigint")) == F.concat(F.col("ic.source"), F.col("ic.id").cast("bigint")),
+#         "left"
+#     )
+#     .join(
+#         silver_package.alias("b"),
+#         F.col("a.dim_package_key") == F.col("b.bk"),
+#         "left"
+#     )
+#     .join(
+#         silver_package_sub_type.alias("pst"),
+#         F.concat(F.col("b.source"), F.col("b.package_sub_type_id").cast("bigint")) == F.col("pst.bk"),
+#         "left"
+#     )
+#     .join(
+#         silver_package_book_limit_line.alias("c"),
+#         F.col("a.package_id") == F.col("c.package_id"),
+#         "left"
+#     )
+#     .join(
+#         silver_location.alias("f"),
+#         F.col("a.dim_revenue_location_key") == F.col("f.bk"),
+#         "left"
+#     )
+#     .join(
+#         dim_location_360f.alias("loc_f"),
+#         F.col("loc_f.dim_location_360f_key") == F.col("f.bk"),
+#         "left"
+#     )
+#     .join(
+#         fct_agreement.alias("upgrade_agt"),
+#         F.col("upgrade_agt.fct_agreement_key") == F.col("a.from_agreement_key"),
+#         "left"
+#     )
+#     .join(
+#         fct_agreement.alias("prev_agt"),
+#         F.col("prev_agt.fct_agreement_key") == F.col("a.prev_agreement_key"),
+#         "left"
+#     )
+#     .join(
+#         silver_package_sub_type.alias("prev_agt_pst"),
+#         F.concat(F.col("prev_agt.source"), F.col("prev_agt.package_sub_type_id").cast("bigint")) == F.col("prev_agt_pst.bk"),
+#         "left"
+#     )
+#     .join(
+#         prev_agt_invoice_df.alias("prev_agt_invoice"),
+#         F.concat(F.col("prev_agt_invoice.source"), F.col("prev_agt_invoice.item_id").cast("bigint")) == F.col("a.prev_agreement_key"),
+#         "left"
+#     )
+#     .join(
+#         upgrade_agt_invoice_df.alias("upgrade_agt_invoice"),
+#         F.concat(F.col("upgrade_agt_invoice.source"), F.col("upgrade_agt_invoice.item_id").cast("bigint")) == F.col("a.prev_agreement_key"),
+#         "left"
+#     )
 
-    # updated on 2025.08.21. Added
-    .join(
-        pos_discount_rounding_df.alias("pos_dis"),
-        F.col("pos_dis.invoice_header_bk") == F.concat(F.col("e.source"), F.col("e.invoice_header_id").cast("bigint")),
-        "left"
-    )
-    .join(
-        raw_invoice_df.alias("ri"),
-        F.col("ri.invoice_header_bk") == F.concat(F.col("e.source"), F.col("e.invoice_header_id").cast("bigint")),
-        "left"
-    )
-    .join(
-        reverse_invoice_df.alias("reverse_invoice"),
-        F.col("reverse_invoice.reverse_invoice_header_bk") == F.concat(F.col("e.source"), F.col("e.invoice_header_id").cast("bigint")),
-        "left"
-    )
-    .filter(
-        F.col('b.package_type_id') == 1
-    )
-    .filter(
-        ~(
-            (F.col("e.invoice_category_id") == 2) &
-            (F.col("e.amount") < 0) &
-            (F.col("e.desc").like("%Corporate Subsidy%"))
-        )
-    )
-)
+#     # updated on 2025.08.21. Added
+#     .join(
+#         pos_discount_rounding_df.alias("pos_dis"),
+#         F.col("pos_dis.invoice_header_bk") == F.concat(F.col("e.source"), F.col("e.invoice_header_id").cast("bigint")),
+#         "left"
+#     )
+#     .join(
+#         raw_invoice_df.alias("ri"),
+#         F.col("ri.invoice_header_bk") == F.concat(F.col("e.source"), F.col("e.invoice_header_id").cast("bigint")),
+#         "left"
+#     )
+#     .join(
+#         reverse_invoice_df.alias("reverse_invoice"),
+#         F.col("reverse_invoice.reverse_invoice_header_bk") == F.concat(F.col("e.source"), F.col("e.invoice_header_id").cast("bigint")),
+#         "left"
+#     )
+#     .filter(
+#         F.col('b.package_type_id') == 1
+#     )
+#     .filter(
+#         ~(
+#             (F.col("e.invoice_category_id") == 2) &
+#             (F.col("e.amount") < 0) &
+#             (F.col("e.desc").like("%Corporate Subsidy%"))
+#         )
+#     )
+# )
 
 #====== [END] CELL 25 ======
 
 
 #====== [START] CELL 26 ======
 
-window_spec = Window.partitionBy("a.dim_contact_key").orderBy("a.signed_date", "a.end_date", "b.service_category_id")
+# window_spec = Window.partitionBy("a.dim_contact_key").orderBy("a.signed_date", "a.end_date", "b.service_category_id")
 
-fct_membership_sales = join_membership_sales.select(
-    F.col("a.fct_agreement_key").cast("string").alias("fct_agreement_key"),
-    F.col("a.from_agreement_key").cast("string").alias("from_agreement_key"),
-    F.col("a.prev_agreement_key").cast("string").alias("prev_agreement_key"),
-    F.col("a.dim_contact_key").cast("string").alias("dim_contact_key"),
-    F.col("a.dim_revenue_location_key").cast("string").alias("dim_revenue_location_key"),
-    F.col("loc_f.dim_location_key").cast("string").alias("dim_location_key"),
-    F.col("f.source").cast("string").alias("source"),
-    F.lag("a.end_date").over(window_spec).cast("timestamp").alias("lagged_end_date"),
-    F.date_format(F.col("a.signed_date"), "yyyy-MM-dd").cast("date").alias("signed_date"),
-    F.date_format(F.col("ih.post_date"), "yyyy-MM-dd").cast("date").alias("post_date"),
-    F.col("a.agreement_status_type").cast("string").alias("agreement_status_type"),
-    F.col("a.agreement_status_group").cast("string").alias("agreement_status_group"),
-    F.col("a.package_id").cast("long").alias("package_id"),
-    F.col("a.monthly_fee").cast("decimal(18,4)").alias("monthly_fee"),
-    F.col("b.package_type_id").cast("long").alias("package_type_id"),
-    F.col("b.package_sub_type_id").cast("long").alias("package_sub_type_id"),
-    F.col("b.package_term_id").cast("long").alias("package_term_id"),
-    F.col("b.service_category_id").cast("long").alias("service_category_id"),
-    F.col("b.name").cast("string").alias("name"),
-    F.col("pst.code").cast("string").alias("package_sub_type_code"),
-    F.col("e.amount").cast("decimal(18,4)").alias("invoice_detail_amount"),
-    F.col("e.invoice_category_id").cast("long").alias("invoice_category_id"),
-    F.col("ic.name").cast("string").alias("invoice_category_name"),
-    
-    # Complex CASE for renew_upgrade_revenue - cast to DECIMAL(38, 17)
-    F.when(
-        (F.col("a.agreement_status_group") == "Upgrade due to prepaid") & 
-        (F.col("ic.name").isin("Prepaid")), 
-        F.col("a.prepaid_fee") - F.col("upgrade_agt.monthly_fee")
-    ).when(
-        (F.col("a.agreement_status_group") == "Upgrade prepaid to prepaid") & 
-        (F.coalesce(F.col("a.prepaid_fee"), F.lit(0)) == 0), 
-        F.lit(0)
-    ).when(
-        (F.col("a.agreement_status_group") == "Upgrade prepaid to prepaid") & 
-        (F.coalesce(F.col("a.prepaid_fee"), F.lit(0)) != 0) & 
-        (F.col("ic.name").isin("Prepaid")), 
-        F.coalesce(F.col("a.prepaid_fee"), F.lit(0)) - F.coalesce(F.col("upgrade_agt.prepaid_fee"), F.lit(0))
-    ).when(
-        (F.col("a.agreement_status_group") == "Renew prepaid to prepaid renew") & 
-        (F.col("ic.name").isin("Prepaid")), 
-        F.col("e.amount").cast("decimal(18,4)") - F.coalesce(F.col("prev_agt_invoice.amount"), F.lit(0))
-    ).when(
-        (F.col("a.agreement_status_group") == "Rejoin prepaid to prepaid renew") & 
-        (F.col("ic.name").isin("Prepaid")), 
-        F.col("e.amount").cast("decimal(18,4)") - F.coalesce(F.col("prev_agt_invoice.amount"), F.lit(0))
-    ).when(
-        (F.col("a.agreement_status_type").isin("Upgrade")) & 
-        (F.col("ic.name").isin("Prepaid")) & 
-        (F.col("b.service_category_id").isin(82, 17)), 
-        F.col("e.amount").cast("decimal(18,4)") - F.coalesce(F.col("upgrade_agt_invoice.amount"), F.lit(0))
-    ).when(
-        (F.col("a.agreement_status_type").isin("Upgrade")) & 
-        (F.col("ic.name").isin("First Month")) & 
-        (F.col("b.service_category_id").isin(82, 17)), 
-        F.coalesce(F.col("a.monthly_fee"), F.lit(0)) - F.coalesce(F.col("upgrade_agt.monthly_fee"), F.lit(0))
-    ).when(
-        (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) & 
-        (F.col("ic.name").isin("Prepaid")) & 
-        (F.col("b.service_category_id").isin(82, 17)), 
-        F.col("e.amount").cast("decimal(18,4)") - F.coalesce(F.col("prev_agt_invoice.amount"), F.lit(0))
-    ).when(
-        (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) & 
-        (F.col("ic.name").isin("First Month")) & 
-        (F.col("b.service_category_id").isin(82, 17)), 
-        F.coalesce(F.col("a.monthly_fee"), F.lit(0)) - F.coalesce(F.col("prev_agt.monthly_fee"), F.lit(0))
-    ).cast("decimal(38,17)").alias("renew_upgrade_revenue"),
-    
-    # Complex CASE for first_last_month_revenue - cast to DECIMAL(19, 4)
-    F.when(
-        (F.col("a.agreement_status_type") == "New") & 
-        (F.col("ic.name").isin("First Month")), 
-        F.col("a.first_month_fee")
-    ).when(
-        (F.col("a.agreement_status_type") == "New") & 
-        (F.col("ic.name").isin("Last Month")), 
-        F.col("a.last_month_fee")
-    ).when(
-        (F.col("a.agreement_status_type") == "Upgrade") & 
-        (F.col("ic.name").isin("First Month")), 
-        F.col("a.first_month_fee") - F.col("upgrade_agt.first_month_fee")
-    ).when(
-        (F.col("a.agreement_status_type") == "Upgrade") & 
-        (F.col("ic.name").isin("Last Month")), 
-        F.col("a.last_month_fee") - F.col("upgrade_agt.last_month_fee")
-    ).when(
-        (F.col("f.source") == "CN") & 
-        (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) & 
-        (F.col("ic.name").isin("First Month")), 
-        F.col("a.first_month_fee") - F.col("prev_agt.first_month_fee")
-    ).when(
-        (F.col("f.source") == "CN") & 
-        (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) & 
-        (F.col("ic.name").isin("Last Month")), 
-        F.col("a.last_month_fee") - F.col("prev_agt.last_month_fee")
-    ).when(
-        (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) & 
-        (F.col("prev_agt_pst.name").isin("Short Term", "Membership")) & 
-        (F.col("ic.name").isin("First Month")), 
-        F.col("a.first_month_fee") - F.col("prev_agt.first_month_fee")
-    ).when(
-        (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) & 
-        (F.col("prev_agt_pst.name").isin("Short Term", "Membership")) & 
-        (F.col("ic.name").isin("Last Month")), 
-        F.col("a.last_month_fee") - F.col("prev_agt.last_month_fee")
-    ).cast("decimal(19,4)").alias("first_last_month_revenue"),
+# fct_membership_sales = join_membership_sales.select(
+#     F.col("a.fct_agreement_key").cast("string").alias("fct_agreement_key"),
+#     F.col("a.from_agreement_key").cast("string").alias("from_agreement_key"),
+#     F.col("a.prev_agreement_key").cast("string").alias("prev_agreement_key"),
+#     F.col("a.dim_contact_key").cast("string").alias("dim_contact_key"),
+#     F.col("a.dim_revenue_location_key").cast("string").alias("dim_revenue_location_key"),
+#     F.col("loc_f.dim_location_key").cast("string").alias("dim_location_key"),
+#     F.col("f.source").cast("string").alias("source"),
+#     F.lag("a.end_date").over(window_spec).cast("timestamp").alias("lagged_end_date"),
+#     F.date_format(F.col("a.signed_date"), "yyyy-MM-dd").cast("date").alias("signed_date"),
+#     F.date_format(F.col("ih.post_date"), "yyyy-MM-dd").cast("date").alias("post_date"),
+#     F.col("a.agreement_status_type").cast("string").alias("agreement_status_type"),
+#     F.col("a.agreement_status_group").cast("string").alias("agreement_status_group"),
+#     F.col("a.package_id").cast("long").alias("package_id"),
+#     F.col("a.monthly_fee").cast("decimal(18,4)").alias("monthly_fee"),
+#     F.col("b.package_type_id").cast("long").alias("package_type_id"),
+#     F.col("b.package_sub_type_id").cast("long").alias("package_sub_type_id"),
+#     F.col("b.package_term_id").cast("long").alias("package_term_id"),
+#     F.col("b.service_category_id").cast("long").alias("service_category_id"),
+#     F.col("b.name").cast("string").alias("name"),
+#     F.col("pst.code").cast("string").alias("package_sub_type_code"),
+#     F.col("e.amount").cast("decimal(18,4)").alias("invoice_detail_amount"),
+#     F.col("e.invoice_category_id").cast("long").alias("invoice_category_id"),
+#     F.col("ic.name").cast("string").alias("invoice_category_name"),
 
-    # updated on 2025.08.21. Added
-    F.when(
-        (F.col("ic.name").isin("Others", "Rounding")), 
-        F.lit(0)
-    ).when(
-        (F.col("e.source") == "CN") &
-        (F.col("e.amount") <= F.lit(0).cast("decimal(18,4)")), 
-        F.lit(0)
-    ).otherwise(F.lit(1)).alias("entitle_to_pos_discount"),
-    F.coalesce(F.col("ri.raw_amount"), F.lit(0)).alias("invoice_raw_total_amount"),
-    F.coalesce(F.col("reverse_invoice.reverse_amount"), F.lit(0)).alias("invoice_reversed_amount"),
-    F.coalesce(F.col("pos_dis.amount"), F.lit(0)).alias("pos_discount_amount"),
-    F.coalesce(F.col("ih.total_amount"), F.lit(0)).alias("invoice_header_total_amount"),
-    F.when(
-        (F.col("invoice_detail_amount") <= 0) | 
-        (F.coalesce(F.col("ri.raw_amount"), F.lit(0)) == 0), 
-        F.lit(0)
-    ).otherwise(F.col("invoice_detail_amount") / F.col("ri.raw_amount")).alias("invoice_amount_ratio"),
+#     # Complex CASE for renew_upgrade_revenue - cast to DECIMAL(38, 17)
+#     F.when(
+#         (F.col("a.agreement_status_group") == "Upgrade due to prepaid") &
+#         (F.col("ic.name").isin("Prepaid")),
+#         F.col("a.prepaid_fee") - F.col("upgrade_agt.monthly_fee")
+#     ).when(
+#         (F.col("a.agreement_status_group") == "Upgrade prepaid to prepaid") &
+#         (F.coalesce(F.col("a.prepaid_fee"), F.lit(0)) == 0),
+#         F.lit(0)
+#     ).when(
+#         (F.col("a.agreement_status_group") == "Upgrade prepaid to prepaid") &
+#         (F.coalesce(F.col("a.prepaid_fee"), F.lit(0)) != 0) &
+#         (F.col("ic.name").isin("Prepaid")),
+#         F.coalesce(F.col("a.prepaid_fee"), F.lit(0)) - F.coalesce(F.col("upgrade_agt.prepaid_fee"), F.lit(0))
+#     ).when(
+#         (F.col("a.agreement_status_group") == "Renew prepaid to prepaid renew") &
+#         (F.col("ic.name").isin("Prepaid")),
+#         F.col("e.amount").cast("decimal(18,4)") - F.coalesce(F.col("prev_agt_invoice.amount"), F.lit(0))
+#     ).when(
+#         (F.col("a.agreement_status_group") == "Rejoin prepaid to prepaid renew") &
+#         (F.col("ic.name").isin("Prepaid")),
+#         F.col("e.amount").cast("decimal(18,4)") - F.coalesce(F.col("prev_agt_invoice.amount"), F.lit(0))
+#     ).when(
+#         (F.col("a.agreement_status_type").isin("Upgrade")) &
+#         (F.col("ic.name").isin("Prepaid")) &
+#         (F.col("b.service_category_id").isin(82, 17)),
+#         F.col("e.amount").cast("decimal(18,4)") - F.coalesce(F.col("upgrade_agt_invoice.amount"), F.lit(0))
+#     ).when(
+#         (F.col("a.agreement_status_type").isin("Upgrade")) &
+#         (F.col("ic.name").isin("First Month")) &
+#         (F.col("b.service_category_id").isin(82, 17)),
+#         F.coalesce(F.col("a.monthly_fee"), F.lit(0)) - F.coalesce(F.col("upgrade_agt.monthly_fee"), F.lit(0))
+#     ).when(
+#         (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) &
+#         (F.col("ic.name").isin("Prepaid")) &
+#         (F.col("b.service_category_id").isin(82, 17)),
+#         F.col("e.amount").cast("decimal(18,4)") - F.coalesce(F.col("prev_agt_invoice.amount"), F.lit(0))
+#     ).when(
+#         (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) &
+#         (F.col("ic.name").isin("First Month")) &
+#         (F.col("b.service_category_id").isin(82, 17)),
+#         F.coalesce(F.col("a.monthly_fee"), F.lit(0)) - F.coalesce(F.col("prev_agt.monthly_fee"), F.lit(0))
+#     ).cast("decimal(38,17)").alias("renew_upgrade_revenue"),
 
-    # F.concat(F.col("e.source"), F.col("e.id").cast("bigint")).cast("string").alias("fct_invoice_detail_key"),
+#     # Complex CASE for first_last_month_revenue - cast to DECIMAL(19, 4)
+#     F.when(
+#         (F.col("a.agreement_status_type") == "New") &
+#         (F.col("ic.name").isin("First Month")),
+#         F.col("a.first_month_fee")
+#     ).when(
+#         (F.col("a.agreement_status_type") == "New") &
+#         (F.col("ic.name").isin("Last Month")),
+#         F.col("a.last_month_fee")
+#     ).when(
+#         (F.col("a.agreement_status_type") == "Upgrade") &
+#         (F.col("ic.name").isin("First Month")),
+#         F.col("a.first_month_fee") - F.col("upgrade_agt.first_month_fee")
+#     ).when(
+#         (F.col("a.agreement_status_type") == "Upgrade") &
+#         (F.col("ic.name").isin("Last Month")),
+#         F.col("a.last_month_fee") - F.col("upgrade_agt.last_month_fee")
+#     ).when(
+#         (F.col("f.source") == "CN") &
+#         (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) &
+#         (F.col("ic.name").isin("First Month")),
+#         F.col("a.first_month_fee") - F.col("prev_agt.first_month_fee")
+#     ).when(
+#         (F.col("f.source") == "CN") &
+#         (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) &
+#         (F.col("ic.name").isin("Last Month")),
+#         F.col("a.last_month_fee") - F.col("prev_agt.last_month_fee")
+#     ).when(
+#         (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) &
+#         (F.col("prev_agt_pst.name").isin("Short Term", "Membership")) &
+#         (F.col("ic.name").isin("First Month")),
+#         F.col("a.first_month_fee") - F.col("prev_agt.first_month_fee")
+#     ).when(
+#         (F.col("a.agreement_status_type").isin("Rejoin", "Renew")) &
+#         (F.col("prev_agt_pst.name").isin("Short Term", "Membership")) &
+#         (F.col("ic.name").isin("Last Month")),
+#         F.col("a.last_month_fee") - F.col("prev_agt.last_month_fee")
+#     ).cast("decimal(19,4)").alias("first_last_month_revenue"),
+
+#     # updated on 2025.08.21. Added
+#     F.when(
+#         (F.col("ic.name").isin("Others", "Rounding")),
+#         F.lit(0)
+#     ).when(
+#         (F.col("e.source") == "CN") &
+#         (F.col("e.amount") <= F.lit(0).cast("decimal(18,4)")),
+#         F.lit(0)
+#     ).otherwise(F.lit(1)).alias("entitle_to_pos_discount"),
+#     F.coalesce(F.col("ri.raw_amount"), F.lit(0)).alias("invoice_raw_total_amount"),
+#     F.coalesce(F.col("reverse_invoice.reverse_amount"), F.lit(0)).alias("invoice_reversed_amount"),
+#     F.coalesce(F.col("pos_dis.amount"), F.lit(0)).alias("pos_discount_amount"),
+#     F.coalesce(F.col("ih.total_amount"), F.lit(0)).alias("invoice_header_total_amount"),
+#     F.when(
+#         (F.col("invoice_detail_amount") <= 0) |
+#         (F.coalesce(F.col("ri.raw_amount"), F.lit(0)) == 0),
+#         F.lit(0)
+#     ).otherwise(F.col("invoice_detail_amount") / F.col("ri.raw_amount")).alias("invoice_amount_ratio"),
+
+#     # F.concat(F.col("e.source"), F.col("e.id").cast("bigint")).cast("string").alias("fct_invoice_detail_key"),
 
 
-).select(
-    F.col("fct_agreement_key").cast("string"),
-    F.col("from_agreement_key").cast("string"),
-    F.col("prev_agreement_key").cast("string"),
-    F.col("dim_contact_key").cast("string"),
-    F.col("dim_revenue_location_key").cast("string"),
-    F.col("dim_location_key").cast("string"),
-    F.col("source").cast("string"),
-    F.col("lagged_end_date").cast("timestamp"),
-    F.col("signed_date").cast("date"),
-    F.col("post_date").cast("date"),
-    F.col("agreement_status_type").cast("string"),
-    F.col("agreement_status_group").cast("string"),
-    F.col("package_id").cast("bigint"),
-    F.col("monthly_fee").cast("decimal(18,4)"),
-    F.col("package_type_id").cast("bigint"),
-    F.col("package_sub_type_id").cast("bigint"),
-    F.col("package_term_id").cast("bigint"),
-    F.col("service_category_id").cast("bigint"),
-    F.col("name").cast("string"),
-    F.col("package_sub_type_code").cast("string"),
-    F.col("invoice_category_id").cast("bigint"),
-    F.col("invoice_category_name").cast("string"),
-    F.col("renew_upgrade_revenue").cast("decimal(38,17)"),
-    F.col("first_last_month_revenue").cast("decimal(19,4)"),
-    F.col("invoice_detail_amount").alias("bk_invoice_detail_amount").cast("decimal(18,4)"),
-    # F.col("fct_invoice_detail_key").cast("string"),
-    
-    # Complex CASE for adjusted invoice_detail_amount -- account for pos discount and reverse invoice by ratio
-    F.when(
-        F.col("invoice_amount_ratio") == 0, 
-        F.col("invoice_detail_amount")
-    )
-    .when(
-        (F.col("pos_discount_amount") == 0) | (F.col("entitle_to_pos_discount") == 0),
-        (F.col("invoice_detail_amount") + F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2)).cast(DecimalType(18, 4))
-    )
-    .otherwise(
-        (
-            F.col("invoice_detail_amount") - 
-            F.abs(F.round(F.col("invoice_amount_ratio") * F.col("pos_discount_amount"), 2)) + 
-            F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2)
-        ).cast(DecimalType(18, 4))
-    ).cast("decimal(18,4)").alias("invoice_detail_amount"),
-    
-    # Adjusted pos_discount_amount
-    F.when(
-        (F.col("pos_discount_amount") == 0) | (F.col("entitle_to_pos_discount") == 0), 
-        F.lit(0)
-    ).otherwise(
-        F.round(F.col("invoice_amount_ratio") * F.col("pos_discount_amount"), 2).cast(DecimalType(18, 4))
-    ).cast("decimal(18,4)").alias("pos_discount_amount"),
-    
-    # voided_amount calculation -- voided or reversed invoice amount
-    F.when(
-        F.col("invoice_reversed_amount") == 0, 
-        F.lit(0)
-    ).otherwise(
-        F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2).cast(DecimalType(18, 4))
-    ).cast("decimal(18,4)").alias("voided_amount")
-).orderBy(
-    'a.dim_contact_key',
-    'signed_date'
+# ).select(
+#     F.col("fct_agreement_key").cast("string"),
+#     F.col("from_agreement_key").cast("string"),
+#     F.col("prev_agreement_key").cast("string"),
+#     F.col("dim_contact_key").cast("string"),
+#     F.col("dim_revenue_location_key").cast("string"),
+#     F.col("dim_location_key").cast("string"),
+#     F.col("source").cast("string"),
+#     F.col("lagged_end_date").cast("timestamp"),
+#     F.col("signed_date").cast("date"),
+#     F.col("post_date").cast("date"),
+#     F.col("agreement_status_type").cast("string"),
+#     F.col("agreement_status_group").cast("string"),
+#     F.col("package_id").cast("bigint"),
+#     F.col("monthly_fee").cast("decimal(18,4)"),
+#     F.col("package_type_id").cast("bigint"),
+#     F.col("package_sub_type_id").cast("bigint"),
+#     F.col("package_term_id").cast("bigint"),
+#     F.col("service_category_id").cast("bigint"),
+#     F.col("name").cast("string"),
+#     F.col("package_sub_type_code").cast("string"),
+#     F.col("invoice_category_id").cast("bigint"),
+#     F.col("invoice_category_name").cast("string"),
+#     F.col("renew_upgrade_revenue").cast("decimal(38,17)"),
+#     F.col("first_last_month_revenue").cast("decimal(19,4)"),
+#     F.col("invoice_detail_amount").alias("bk_invoice_detail_amount").cast("decimal(18,4)"),
+#     # F.col("fct_invoice_detail_key").cast("string"),
+
+#     # Complex CASE for adjusted invoice_detail_amount -- account for pos discount and reverse invoice by ratio
+#     F.when(
+#         F.col("invoice_amount_ratio") == 0,
+#         F.col("invoice_detail_amount")
+#     )
+#     .when(
+#         (F.col("pos_discount_amount") == 0) | (F.col("entitle_to_pos_discount") == 0),
+#         (F.col("invoice_detail_amount") + F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2)).cast(DecimalType(18, 4))
+#     )
+#     .otherwise(
+#         (
+#             F.col("invoice_detail_amount") -
+#             F.abs(F.round(F.col("invoice_amount_ratio") * F.col("pos_discount_amount"), 2)) +
+#             F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2)
+#         ).cast(DecimalType(18, 4))
+#     ).cast("decimal(18,4)").alias("invoice_detail_amount"),
+
+#     # Adjusted pos_discount_amount
+#     F.when(
+#         (F.col("pos_discount_amount") == 0) | (F.col("entitle_to_pos_discount") == 0),
+#         F.lit(0)
+#     ).otherwise(
+#         F.round(F.col("invoice_amount_ratio") * F.col("pos_discount_amount"), 2).cast(DecimalType(18, 4))
+#     ).cast("decimal(18,4)").alias("pos_discount_amount"),
+
+#     # voided_amount calculation -- voided or reversed invoice amount
+#     F.when(
+#         F.col("invoice_reversed_amount") == 0,
+#         F.lit(0)
+#     ).otherwise(
+#         F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2).cast(DecimalType(18, 4))
+#     ).cast("decimal(18,4)").alias("voided_amount")
+# ).orderBy(
+#     'a.dim_contact_key',
+#     'signed_date'
 # ).withColumn(
 #     "dim_location_key", 
 #     F.when(F.col("dim_location_key").isNull(), F.concat(F.col("source"), F.lit("9999")))
 #         .otherwise(F.col("dim_location_key"))
-)
+# )
 
 
 
@@ -977,18 +977,18 @@ fct_membership_sales = join_membership_sales.select(
 
 #====== [START] CELL 29 ======
 
-silver_agreement = spark.read.table(TABLE('360_silver_agreement'))
-silver_invoice_detail = spark.read.table(TABLE('silver_invoice_detail'))
-silver_invoice_header = spark.read.table(TABLE('silver_invoice_header'))
-silver_invoice_category = spark.read.table(TABLE('silver_invoice_category'))
-silver_package = spark.read.table(TABLE('360_silver_package'))
-silver_package_type = spark.read.table(TABLE('silver_package_type'))
-silver_package_book_limit_line = spark.read.table(TABLE('silver_package_book_limit_line'))
-silver_service = spark.read.table(TABLE('silver_service'))
-silver_mbo_service_category = spark.read.table(TABLE('silver_mbo_service_category'))
-silver_location = spark.read.table(TABLE('silver_location'))
+# silver_agreement = spark.read.table(TABLE('360_silver_agreement'))
+# silver_invoice_detail = spark.read.table(TABLE('silver_invoice_detail'))
+# silver_invoice_header = spark.read.table(TABLE('silver_invoice_header'))
+# silver_invoice_category = spark.read.table(TABLE('silver_invoice_category'))
+# silver_package = spark.read.table(TABLE('360_silver_package'))
+# silver_package_type = spark.read.table(TABLE('silver_package_type'))
+# silver_package_book_limit_line = spark.read.table(TABLE('silver_package_book_limit_line'))
+# silver_service = spark.read.table(TABLE('silver_service'))
+# silver_mbo_service_category = spark.read.table(TABLE('silver_mbo_service_category'))
+# silver_location = spark.read.table(TABLE('silver_location'))
 
-dim_location_360f = spark.read.table(TABLE('dim_location_360f'))
+# dim_location_360f = spark.read.table(TABLE('dim_location_360f'))
 
 
 #====== [END] CELL 29 ======
@@ -996,24 +996,24 @@ dim_location_360f = spark.read.table(TABLE('dim_location_360f'))
 
 #====== [START] CELL 30 ======
 
-first_valid_agreement = (
-    silver_agreement
-    .filter((F.col('agreement_status_id') != 2) & (F.col('active') == 1))
-    .withColumn("row_num", F.row_number().over(Window.partitionBy("source", "contact_id", F.col("package_type_id").cast("bigint")).orderBy("start_date")))
-    # .filter(F.col('row_num') == 1)
-)
+# first_valid_agreement = (
+#     silver_agreement
+#     .filter((F.col('agreement_status_id') != 2) & (F.col('active') == 1))
+#     .withColumn("row_num", F.row_number().over(Window.partitionBy("source", "contact_id", F.col("package_type_id").cast("bigint")).orderBy("start_date")))
+#     # .filter(F.col('row_num') == 1)
+# )
 
 #====== [END] CELL 30 ======
 
 
 #====== [START] CELL 31 ======
 
-dup_agreements = (
-    silver_agreement
-    .groupBy("source", "contact_id", F.col("package_type_id").cast("bigint"), "start_date")
-    .count()
-    .filter(F.col("count") > 1)
-)
+# dup_agreements = (
+#     silver_agreement
+#     .groupBy("source", "contact_id", F.col("package_type_id").cast("bigint"), "start_date")
+#     .count()
+#     .filter(F.col("count") > 1)
+# )
 
 # display(dup_agreements)
 
@@ -1022,54 +1022,54 @@ dup_agreements = (
 
 #====== [START] CELL 32 ======
 
-first_valid_agreement = (
-    silver_agreement
-    .filter((F.col('agreement_status_id') != 2) & (F.col('active') == 1))
-    .withColumn("row_num", F.row_number().over(Window.partitionBy("source", "contact_id", F.col("package_type_id").cast("bigint")).orderBy("start_date")))
-    .filter(F.col('row_num') == 1)
-)
+# first_valid_agreement = (
+#     silver_agreement
+#     .filter((F.col('agreement_status_id') != 2) & (F.col('active') == 1))
+#     .withColumn("row_num", F.row_number().over(Window.partitionBy("source", "contact_id", F.col("package_type_id").cast("bigint")).orderBy("start_date")))
+#     .filter(F.col('row_num') == 1)
+# )
 
 
-# updated on 2025.08.21. Added
-pos_discount_rounding_df = (
-    silver_invoice_detail.alias("id")
-    .filter(F.col("active") == 1)
-    .filter(F.col("item_type") == "product")
-    .join(
-        silver_invoice_category.alias("ic").filter(F.col("active") == 1).filter(F.col("ic.name").isin(["Others", "Rounding"])),
-        F.concat(F.col("id.source"), F.col("id.invoice_category_id").cast("bigint")) == F.concat(F.col("ic.source"), F.col("ic.id").cast("bigint")),
-        "inner"
-    )
-    .groupBy("id.invoice_header_id", "id.source")
-    .agg(F.sum("id.amount").cast(DecimalType(18, 4)).alias("amount"))
-    .withColumn("invoice_header_bk", F.concat(F.col("source"), F.col("invoice_header_id").cast("bigint")))
-    .filter(F.col("amount") < F.lit(0).cast(DecimalType(18, 4)))
-    .select("invoice_header_bk", "amount")
-)
+# # updated on 2025.08.21. Added
+# pos_discount_rounding_df = (
+#     silver_invoice_detail.alias("id")
+#     .filter(F.col("active") == 1)
+#     .filter(F.col("item_type") == "product")
+#     .join(
+#         silver_invoice_category.alias("ic").filter(F.col("active") == 1).filter(F.col("ic.name").isin(["Others", "Rounding"])),
+#         F.concat(F.col("id.source"), F.col("id.invoice_category_id").cast("bigint")) == F.concat(F.col("ic.source"), F.col("ic.id").cast("bigint")),
+#         "inner"
+#     )
+#     .groupBy("id.invoice_header_id", "id.source")
+#     .agg(F.sum("id.amount").cast(DecimalType(18, 4)).alias("amount"))
+#     .withColumn("invoice_header_bk", F.concat(F.col("source"), F.col("invoice_header_id").cast("bigint")))
+#     .filter(F.col("amount") < F.lit(0).cast(DecimalType(18, 4)))
+#     .select("invoice_header_bk", "amount")
+# )
 
-raw_invoice_df = (
-    silver_invoice_detail.alias("id")
-    .filter(F.col("active") == 1)
-    .join(
-        silver_invoice_category.alias("ic").filter(~F.col("ic.name").isin(["Others", "Rounding"])),
-        F.concat(F.col("id.source"), F.col("id.invoice_category_id").cast("bigint")) == F.concat(F.col("ic.source"), F.col("ic.id").cast("bigint")),
-        "inner"
-    )
-    .groupBy("id.invoice_header_id", "id.source")
-    .agg(F.sum("id.amount").cast(DecimalType(18, 4)).alias("raw_amount"))
-    .withColumn("invoice_header_bk", F.concat(F.col("source"), F.col("invoice_header_id").cast("bigint")))
-    .select("invoice_header_bk", "raw_amount")
-)
+# raw_invoice_df = (
+#     silver_invoice_detail.alias("id")
+#     .filter(F.col("active") == 1)
+#     .join(
+#         silver_invoice_category.alias("ic").filter(~F.col("ic.name").isin(["Others", "Rounding"])),
+#         F.concat(F.col("id.source"), F.col("id.invoice_category_id").cast("bigint")) == F.concat(F.col("ic.source"), F.col("ic.id").cast("bigint")),
+#         "inner"
+#     )
+#     .groupBy("id.invoice_header_id", "id.source")
+#     .agg(F.sum("id.amount").cast(DecimalType(18, 4)).alias("raw_amount"))
+#     .withColumn("invoice_header_bk", F.concat(F.col("source"), F.col("invoice_header_id").cast("bigint")))
+#     .select("invoice_header_bk", "raw_amount")
+# )
 
-reverse_invoice_df = (
-    silver_invoice_detail
-    .filter(F.col("item_type") == "invoice_header")
-    .filter(F.col("active") == 1)
-    .groupBy("source", "item_id")
-    .agg(F.sum("amount").alias("reverse_amount"))
-    .withColumn("reverse_invoice_header_bk", F.concat(F.col("source"), F.col("item_id").cast("bigint")))
-    .select("reverse_invoice_header_bk", "reverse_amount")
-)
+# reverse_invoice_df = (
+#     silver_invoice_detail
+#     .filter(F.col("item_type") == "invoice_header")
+#     .filter(F.col("active") == 1)
+#     .groupBy("source", "item_id")
+#     .agg(F.sum("amount").alias("reverse_amount"))
+#     .withColumn("reverse_invoice_header_bk", F.concat(F.col("source"), F.col("item_id").cast("bigint")))
+#     .select("reverse_invoice_header_bk", "reverse_amount")
+# )
 
 
 #====== [END] CELL 32 ======
@@ -1077,156 +1077,156 @@ reverse_invoice_df = (
 
 #====== [START] CELL 33 ======
 
-join_agreement_sales = (
-    silver_agreement.alias("a")
-    .join(
-        silver_invoice_detail.alias("e"),
-        (F.concat(F.col("e.source"), F.col("e.item_id").cast("bigint")) == F.col("a.bk")) & 
-        (F.col("e.item_type") == "agreement") & 
-        (F.col("e.active") == 1),       # updated on 2025.08.21. Added
-        "inner"
-    )
-    .join(
-        silver_invoice_header.alias("ih"),
-        (F.concat(F.col("e.source"), F.col("e.invoice_header_id").cast("bigint")) == F.concat(F.col("ih.source"), F.col("ih.id").cast("bigint"))) &
-        (F.col("ih.active") == 1),      # updated on 2025.08.21. Added
-        "inner"
-    )
-    .join(
-        silver_invoice_category.alias("ic").filter(~F.col("ic.name").isin(["Others", "Rounding"])),
-        F.concat(F.col("e.source"), F.col("e.invoice_category_id").cast("bigint")) == F.concat(F.col("ic.source"), F.col("ic.id").cast("bigint")),
-        "left"
-    )
-    .join(
-        silver_package.alias("b"),
-        F.concat(F.col("a.source"), F.col("a.package_id")) == F.col("b.bk"),
-        "left"
-    )
-    .join(
-        silver_package_type.alias("pt"),
-        (F.concat(F.col("b.source"), F.col("b.package_type_id")) == F.col("pt.bk")) &
-        (F.col("pt.active") == 1),      # updated on 2025.08.21. Added
-        "left"
-    )
-    .join(
-        silver_package_book_limit_line.alias("c"),
-        F.col("a.package_id") == F.col("c.package_id"),
-        "left"
-    )
-    .join(
-        silver_service.alias("s"),
-        F.concat(F.col("b.source"), F.col("b.ext_ref_package_id")) == F.concat(F.col("s.source"), F.col("s.service_id")),
-        "left"
-    )
-    .join(
-        silver_mbo_service_category.alias("mbo_service_cat"),
-        F.concat(F.col("b.source"), F.col("b.service_category_id")) == F.concat(F.col("mbo_service_cat.source"), F.col("mbo_service_cat.service_category_id")),
-        "left"
-    )
-    .join(
-        silver_location.alias("f"),
-        F.concat(F.col("a.source"), F.col("a.revenue_location_id")) == F.col("f.bk"),
-        "left"
-    )
-    .join(
-        dim_location_360f.alias("loc_f"),
-        F.col("loc_f.dim_location_360f_key") == F.col("f.bk"),
-        "left"
-    )
-    .join(
-        first_valid_agreement.alias("first_agmt"),
-        (F.concat(F.col("first_agmt.source"), F.col("first_agmt.contact_id"), F.col("first_agmt.package_type_id").cast("bigint")) == F.concat(F.col("a.source"), F.col("a.contact_id"), F.col("a.package_type_id").cast("bigint"))) &
-        (F.col("a.start_date") > F.col("first_agmt.start_date")) & 
-        (F.col("a.bk") != F.col("first_agmt.bk")),
-        "left"
-    )
+# join_agreement_sales = (
+#     silver_agreement.alias("a")
+#     .join(
+#         silver_invoice_detail.alias("e"),
+#         (F.concat(F.col("e.source"), F.col("e.item_id").cast("bigint")) == F.col("a.bk")) &
+#         (F.col("e.item_type") == "agreement") &
+#         (F.col("e.active") == 1),       # updated on 2025.08.21. Added
+#         "inner"
+#     )
+#     .join(
+#         silver_invoice_header.alias("ih"),
+#         (F.concat(F.col("e.source"), F.col("e.invoice_header_id").cast("bigint")) == F.concat(F.col("ih.source"), F.col("ih.id").cast("bigint"))) &
+#         (F.col("ih.active") == 1),      # updated on 2025.08.21. Added
+#         "inner"
+#     )
+#     .join(
+#         silver_invoice_category.alias("ic").filter(~F.col("ic.name").isin(["Others", "Rounding"])),
+#         F.concat(F.col("e.source"), F.col("e.invoice_category_id").cast("bigint")) == F.concat(F.col("ic.source"), F.col("ic.id").cast("bigint")),
+#         "left"
+#     )
+#     .join(
+#         silver_package.alias("b"),
+#         F.concat(F.col("a.source"), F.col("a.package_id")) == F.col("b.bk"),
+#         "left"
+#     )
+#     .join(
+#         silver_package_type.alias("pt"),
+#         (F.concat(F.col("b.source"), F.col("b.package_type_id")) == F.col("pt.bk")) &
+#         (F.col("pt.active") == 1),      # updated on 2025.08.21. Added
+#         "left"
+#     )
+#     .join(
+#         silver_package_book_limit_line.alias("c"),
+#         F.col("a.package_id") == F.col("c.package_id"),
+#         "left"
+#     )
+#     .join(
+#         silver_service.alias("s"),
+#         F.concat(F.col("b.source"), F.col("b.ext_ref_package_id")) == F.concat(F.col("s.source"), F.col("s.service_id")),
+#         "left"
+#     )
+#     .join(
+#         silver_mbo_service_category.alias("mbo_service_cat"),
+#         F.concat(F.col("b.source"), F.col("b.service_category_id")) == F.concat(F.col("mbo_service_cat.source"), F.col("mbo_service_cat.service_category_id")),
+#         "left"
+#     )
+#     .join(
+#         silver_location.alias("f"),
+#         F.concat(F.col("a.source"), F.col("a.revenue_location_id")) == F.col("f.bk"),
+#         "left"
+#     )
+#     .join(
+#         dim_location_360f.alias("loc_f"),
+#         F.col("loc_f.dim_location_360f_key") == F.col("f.bk"),
+#         "left"
+#     )
+#     .join(
+#         first_valid_agreement.alias("first_agmt"),
+#         (F.concat(F.col("first_agmt.source"), F.col("first_agmt.contact_id"), F.col("first_agmt.package_type_id").cast("bigint")) == F.concat(F.col("a.source"), F.col("a.contact_id"), F.col("a.package_type_id").cast("bigint"))) &
+#         (F.col("a.start_date") > F.col("first_agmt.start_date")) &
+#         (F.col("a.bk") != F.col("first_agmt.bk")),
+#         "left"
+#     )
 
-    # updated on 2025.08.21. Added
-    .join(
-        pos_discount_rounding_df.alias("pos_dis"),
-        F.col("pos_dis.invoice_header_bk") == F.concat(F.col("e.source"), F.col("e.invoice_header_id").cast("bigint")),
-        "left"
-    )
-    .join(
-        raw_invoice_df.alias("ri"),
-        F.col("ri.invoice_header_bk") == F.concat(F.col("e.source"), F.col("e.invoice_header_id").cast("bigint")),
-        "left"
-    )
-    .join(
-        reverse_invoice_df.alias("reverse_invoice"),
-        F.col("reverse_invoice.reverse_invoice_header_bk") == F.concat(F.col("e.source"), F.col("e.invoice_header_id").cast("bigint")),
-        "left"
-    )
-    # updated end
+#     # updated on 2025.08.21. Added
+#     .join(
+#         pos_discount_rounding_df.alias("pos_dis"),
+#         F.col("pos_dis.invoice_header_bk") == F.concat(F.col("e.source"), F.col("e.invoice_header_id").cast("bigint")),
+#         "left"
+#     )
+#     .join(
+#         raw_invoice_df.alias("ri"),
+#         F.col("ri.invoice_header_bk") == F.concat(F.col("e.source"), F.col("e.invoice_header_id").cast("bigint")),
+#         "left"
+#     )
+#     .join(
+#         reverse_invoice_df.alias("reverse_invoice"),
+#         F.col("reverse_invoice.reverse_invoice_header_bk") == F.concat(F.col("e.source"), F.col("e.invoice_header_id").cast("bigint")),
+#         "left"
+#     )
+#     # updated end
 
-    .select(
-        F.col("a.bk").cast("string").alias("fct_agreement_key"),
-        F.concat(F.col("a.source"), F.col("a.contact_id")).cast("string").alias("dim_contact_key"),
-        F.col("a.contact_id").cast("bigint").alias("contact_id"),
-        F.col("f.source").cast("string").alias("source"),
-        F.col("f.bk").cast("string").alias("dim_revenue_location_key"),
-        F.col("loc_f.dim_location_key").cast("string").alias("dim_location_key"),
-        F.col("a.start_date").alias("start_date"),
-        F.col("a.end_date").alias("end_date"),
-        F.to_date(F.col("a.signed_date")).alias("signed_date"),
-        F.to_date(F.col("ih.post_date")).alias("post_date"),
-        F.col("a.package_id").cast("bigint").alias("package_id"),
-        F.col("b.package_type_id").cast("bigint").alias("package_type_id"),
-        F.col("pt.name").cast("string").alias("package_type_name"),
-        F.col("pt.ext_ref_package_type_id").cast("string").alias("ext_ref_package_type_id"),
-        F.col("b.package_sub_type_id").alias("package_sub_type_id"),
-        F.col("b.package_term_id").cast("bigint").alias("package_term_id"),
-        F.col("b.service_category_id").cast("bigint").alias("service_category_id"),
-        F.col("mbo_service_cat.service_category_name").cast("string").alias("service_category_name"),
-        F.col("s.service_name").cast("string").alias("service_name"),
-        F.col("b.is_pos").cast("int").alias("is_pos"),
-        F.when(
-            (F.col("a.source") == "SG") &
-            (F.col("first_agmt.bk").isNull()) &
-            (F.col("a.package_type_id").isin(2, 3, 10)) &           # updated on 2025.08.21. Added #10
-            (F.col("b.is_pos") == 0), 
-            1
-        ).when(
-            (F.col("a.source") == "SG") &
-            (F.col("a.package_type_id").isin(2, 3, 10)),            # updated on 2025.08.21. Added #10
-            0
-        ).otherwise(F.col("b.is_new")).cast("int").alias("is_new"),
-        F.when(
-            (F.col("a.source") == "SG") &
-            (F.col("first_agmt.bk").isNotNull()) &
-            (F.col("a.package_type_id").isin(2, 3, 10)) &           # updated on 2025.08.21. Added #10
-            (F.col("b.is_pos") == 0), 
-            1
-        ).when(
-            (F.col("a.source") == "SG") &
-            (F.col("a.package_type_id").isin(2, 3, 10)),            # updated on 2025.08.21. Added #10
-            0
-        ).otherwise(F.col("b.is_renew")).cast("int").alias("is_renew"),
-        # F.col("b.is_new").cast("int").alias("is_new"),
-        # F.col("b.is_renew").cast("int").alias("is_renew"),
-        F.col("b.name").cast("string").alias("name"),
-        F.col("b.min_committed_month").alias("min_committed_month"),
-        F.col("e.amount").cast("decimal(18,4)").alias("invoice_detail_amount"),
-        F.col("e.invoice_category_id").alias("invoice_category_id"),
-        F.col("ic.ext_ref_invoice_category_id").cast("string").alias("ext_ref_invoice_category_id"),
+#     .select(
+#         F.col("a.bk").cast("string").alias("fct_agreement_key"),
+#         F.concat(F.col("a.source"), F.col("a.contact_id")).cast("string").alias("dim_contact_key"),
+#         F.col("a.contact_id").cast("bigint").alias("contact_id"),
+#         F.col("f.source").cast("string").alias("source"),
+#         F.col("f.bk").cast("string").alias("dim_revenue_location_key"),
+#         F.col("loc_f.dim_location_key").cast("string").alias("dim_location_key"),
+#         F.col("a.start_date").alias("start_date"),
+#         F.col("a.end_date").alias("end_date"),
+#         F.to_date(F.col("a.signed_date")).alias("signed_date"),
+#         F.to_date(F.col("ih.post_date")).alias("post_date"),
+#         F.col("a.package_id").cast("bigint").alias("package_id"),
+#         F.col("b.package_type_id").cast("bigint").alias("package_type_id"),
+#         F.col("pt.name").cast("string").alias("package_type_name"),
+#         F.col("pt.ext_ref_package_type_id").cast("string").alias("ext_ref_package_type_id"),
+#         F.col("b.package_sub_type_id").alias("package_sub_type_id"),
+#         F.col("b.package_term_id").cast("bigint").alias("package_term_id"),
+#         F.col("b.service_category_id").cast("bigint").alias("service_category_id"),
+#         F.col("mbo_service_cat.service_category_name").cast("string").alias("service_category_name"),
+#         F.col("s.service_name").cast("string").alias("service_name"),
+#         F.col("b.is_pos").cast("int").alias("is_pos"),
+#         F.when(
+#             (F.col("a.source") == "SG") &
+#             (F.col("first_agmt.bk").isNull()) &
+#             (F.col("a.package_type_id").isin(2, 3, 10)) &           # updated on 2025.08.21. Added #10
+#             (F.col("b.is_pos") == 0),
+#             1
+#         ).when(
+#             (F.col("a.source") == "SG") &
+#             (F.col("a.package_type_id").isin(2, 3, 10)),            # updated on 2025.08.21. Added #10
+#             0
+#         ).otherwise(F.col("b.is_new")).cast("int").alias("is_new"),
+#         F.when(
+#             (F.col("a.source") == "SG") &
+#             (F.col("first_agmt.bk").isNotNull()) &
+#             (F.col("a.package_type_id").isin(2, 3, 10)) &           # updated on 2025.08.21. Added #10
+#             (F.col("b.is_pos") == 0),
+#             1
+#         ).when(
+#             (F.col("a.source") == "SG") &
+#             (F.col("a.package_type_id").isin(2, 3, 10)),            # updated on 2025.08.21. Added #10
+#             0
+#         ).otherwise(F.col("b.is_renew")).cast("int").alias("is_renew"),
+#         # F.col("b.is_new").cast("int").alias("is_new"),
+#         # F.col("b.is_renew").cast("int").alias("is_renew"),
+#         F.col("b.name").cast("string").alias("name"),
+#         F.col("b.min_committed_month").alias("min_committed_month"),
+#         F.col("e.amount").cast("decimal(18,4)").alias("invoice_detail_amount"),
+#         F.col("e.invoice_category_id").alias("invoice_category_id"),
+#         F.col("ic.ext_ref_invoice_category_id").cast("string").alias("ext_ref_invoice_category_id"),
 
-        # updated on 2025.08.21. Added
-        F.col("pos_dis.amount").cast("decimal(18,4)").alias("pos_discount_amount"),
-        F.col("ri.raw_amount").alias("invoice_raw_total_amount"),
-        F.when(
-            F.col("ic.name").isin(["Others", "Rounding"]), 
-            0
-        )
-        .when(
-            (F.col("e.source") == "CN") & 
-            (F.col("e.amount") <= F.lit(0).cast("decimal(18, 4)")), 
-            0
-        ).otherwise(1).alias("entitle_to_pos_discount"),
-        F.coalesce(F.col("reverse_invoice.reverse_amount"), F.lit(0)).alias("reversed_amount"),
-        F.col("ih.total_amount").alias("invoice_header_total_amount"),
-        # F.concat(F.col("e.source"), F.col("e.id").cast("bigint")).cast("string").alias("fct_invoice_detail_key"),
-    )
-)
+#         # updated on 2025.08.21. Added
+#         F.col("pos_dis.amount").cast("decimal(18,4)").alias("pos_discount_amount"),
+#         F.col("ri.raw_amount").alias("invoice_raw_total_amount"),
+#         F.when(
+#             F.col("ic.name").isin(["Others", "Rounding"]),
+#             0
+#         )
+#         .when(
+#             (F.col("e.source") == "CN") &
+#             (F.col("e.amount") <= F.lit(0).cast("decimal(18, 4)")),
+#             0
+#         ).otherwise(1).alias("entitle_to_pos_discount"),
+#         F.coalesce(F.col("reverse_invoice.reverse_amount"), F.lit(0)).alias("reversed_amount"),
+#         F.col("ih.total_amount").alias("invoice_header_total_amount"),
+#         # F.concat(F.col("e.source"), F.col("e.id").cast("bigint")).cast("string").alias("fct_invoice_detail_key"),
+#     )
+# )
 
 
 #====== [END] CELL 33 ======
@@ -1234,119 +1234,119 @@ join_agreement_sales = (
 
 #====== [START] CELL 34 ======
 
-agg_agreement_sales = (
-    join_agreement_sales.groupBy(
-        "fct_agreement_key",
-        "dim_contact_key",
-        "contact_id",
-        "dim_revenue_location_key",
-        "dim_location_key",
-        "source",
-        "signed_date",
-        "post_date",
-        "package_id",
-        "package_type_id",
-        "package_type_name",
-        "ext_ref_package_type_id",
-        "package_sub_type_id",
-        "package_term_id",
-        "is_pos",
-        "is_new",
-        "is_renew",
-        "service_category_id",
-        "service_category_name",
-        "service_name",
-        "name",
-        "invoice_category_id",
-        "ext_ref_invoice_category_id",
-        "entitle_to_pos_discount",
-        # "fct_invoice_detail_key"
-    )
-    .agg(
-        F.count("fct_agreement_key").cast("bigint").alias("n_agreement"),
-        F.sum("invoice_detail_amount").alias("total_revenue_agreement"),
+# agg_agreement_sales = (
+#     join_agreement_sales.groupBy(
+#         "fct_agreement_key",
+#         "dim_contact_key",
+#         "contact_id",
+#         "dim_revenue_location_key",
+#         "dim_location_key",
+#         "source",
+#         "signed_date",
+#         "post_date",
+#         "package_id",
+#         "package_type_id",
+#         "package_type_name",
+#         "ext_ref_package_type_id",
+#         "package_sub_type_id",
+#         "package_term_id",
+#         "is_pos",
+#         "is_new",
+#         "is_renew",
+#         "service_category_id",
+#         "service_category_name",
+#         "service_name",
+#         "name",
+#         "invoice_category_id",
+#         "ext_ref_invoice_category_id",
+#         "entitle_to_pos_discount",
+#         # "fct_invoice_detail_key"
+#     )
+#     .agg(
+#         F.count("fct_agreement_key").cast("bigint").alias("n_agreement"),
+#         F.sum("invoice_detail_amount").alias("total_revenue_agreement"),
 
-        # updated on 2025.08.21. Added
-        F.coalesce(F.sum("invoice_raw_total_amount"), F.lit(0)).alias("invoice_raw_total_amount"),
-        F.coalesce(F.sum("reversed_amount"), F.lit(0)).alias("invoice_reversed_amount"),
-        F.coalesce(F.sum("pos_discount_amount"), F.lit(0)).alias("pos_discount_amount"),
-        F.when(
-            (F.sum("invoice_detail_amount") <= 0) | 
-            (F.sum("invoice_raw_total_amount") == 0), 
-            0
-        ).otherwise(
-            F.sum("invoice_detail_amount") / F.sum("invoice_raw_total_amount")
-        ).alias("invoice_amount_ratio"),
-    )
-)
+#         # updated on 2025.08.21. Added
+#         F.coalesce(F.sum("invoice_raw_total_amount"), F.lit(0)).alias("invoice_raw_total_amount"),
+#         F.coalesce(F.sum("reversed_amount"), F.lit(0)).alias("invoice_reversed_amount"),
+#         F.coalesce(F.sum("pos_discount_amount"), F.lit(0)).alias("pos_discount_amount"),
+#         F.when(
+#             (F.sum("invoice_detail_amount") <= 0) |
+#             (F.sum("invoice_raw_total_amount") == 0),
+#             0
+#         ).otherwise(
+#             F.sum("invoice_detail_amount") / F.sum("invoice_raw_total_amount")
+#         ).alias("invoice_amount_ratio"),
+#     )
+# )
 
-fct_agreement_sales = (
-    agg_agreement_sales.select(
-        F.col("fct_agreement_key").cast("string"),
-        F.col("dim_contact_key").cast("string"),
-        F.col("contact_id").cast("bigint"),
-        F.col("dim_revenue_location_key").cast("string"),
-        F.col("dim_location_key").cast("string"),
-        F.col("source").cast("string"),
-        F.col("signed_date").cast("date"),
-        F.col("post_date").cast("date"),
-        F.col("package_id").cast("bigint"),
-        F.col("package_type_id").cast("bigint"),
-        F.col("package_type_name").cast("string"),
-        F.col("ext_ref_package_type_id").cast("string"),
-        F.col("package_sub_type_id").cast("decimal(38, 18)"),
-        F.col("package_term_id").cast("bigint"),
-        F.col("is_pos").cast("int"),
-        F.col("is_new").cast("int"),
-        F.col("is_renew").cast("int"),
-        F.col("service_category_id").cast("bigint"),
-        F.col("service_category_name").cast("string"),
-        F.col("service_name").cast("string"),
-        F.col("name").cast("string"),
-        F.col("invoice_category_id").cast("decimal(38, 18)"),
-        F.col("ext_ref_invoice_category_id").cast("string"),
-        F.col("n_agreement").cast("bigint"),
-        F.col("invoice_amount_ratio").cast("decimal(38, 10)"),
-        F.col("total_revenue_agreement").cast("decimal(28, 4)").alias("bk_total_revenue_agreement"),
-        # F.col("fct_invoice_detail_key").cast("string"),
+# fct_agreement_sales = (
+#     agg_agreement_sales.select(
+#         F.col("fct_agreement_key").cast("string"),
+#         F.col("dim_contact_key").cast("string"),
+#         F.col("contact_id").cast("bigint"),
+#         F.col("dim_revenue_location_key").cast("string"),
+#         F.col("dim_location_key").cast("string"),
+#         F.col("source").cast("string"),
+#         F.col("signed_date").cast("date"),
+#         F.col("post_date").cast("date"),
+#         F.col("package_id").cast("bigint"),
+#         F.col("package_type_id").cast("bigint"),
+#         F.col("package_type_name").cast("string"),
+#         F.col("ext_ref_package_type_id").cast("string"),
+#         F.col("package_sub_type_id").cast("decimal(38, 18)"),
+#         F.col("package_term_id").cast("bigint"),
+#         F.col("is_pos").cast("int"),
+#         F.col("is_new").cast("int"),
+#         F.col("is_renew").cast("int"),
+#         F.col("service_category_id").cast("bigint"),
+#         F.col("service_category_name").cast("string"),
+#         F.col("service_name").cast("string"),
+#         F.col("name").cast("string"),
+#         F.col("invoice_category_id").cast("decimal(38, 18)"),
+#         F.col("ext_ref_invoice_category_id").cast("string"),
+#         F.col("n_agreement").cast("bigint"),
+#         F.col("invoice_amount_ratio").cast("decimal(38, 10)"),
+#         F.col("total_revenue_agreement").cast("decimal(28, 4)").alias("bk_total_revenue_agreement"),
+#         # F.col("fct_invoice_detail_key").cast("string"),
 
-        # Complex CASE for adjusted total_revenue_agreement
-        F.when(
-            F.col("invoice_amount_ratio") == 0, 
-            F.col("total_revenue_agreement")
-        ).when(
-            (F.col("pos_discount_amount") == 0) | (F.col("entitle_to_pos_discount") == 0),
-            (F.col("total_revenue_agreement") + F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2)).cast("decimal(18,4)")
-        ).otherwise(
-            (
-                F.col("total_revenue_agreement") - 
-                F.abs(F.round(F.col("invoice_amount_ratio") * F.col("pos_discount_amount"), 2)) + 
-                F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2)
-            ).cast("decimal(18,4)")
-        ).cast("decimal(28, 4)").alias("total_revenue_agreement"),
-        
-        # Adjusted pos_discount_amount
-        F.when(
-            (F.col("pos_discount_amount") == 0) | (F.col("entitle_to_pos_discount") == 0), 
-            0
-        ).otherwise(
-            F.round(F.col("invoice_amount_ratio") * F.col("pos_discount_amount"), 2).cast("decimal(18,4)")
-        ).cast("decimal(18, 4)").alias("pos_discount_amount"),
-        
-        # voided_amount calculation
-        F.when(
-            F.col("invoice_reversed_amount") == 0, 
-            0
-        ).otherwise(
-            F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2).cast("decimal(18,4)")
-        ).cast("decimal(18, 4)").alias("voided_amount")
-    )
-    # .withColumn(
-    #     "dim_location_key", 
-    #     F.when(F.col("dim_location_key").isNull(), F.concat(F.col("source"), F.lit("9999")))
-    #      .otherwise(F.col("dim_location_key"))
-    # )
-)
+#         # Complex CASE for adjusted total_revenue_agreement
+#         F.when(
+#             F.col("invoice_amount_ratio") == 0,
+#             F.col("total_revenue_agreement")
+#         ).when(
+#             (F.col("pos_discount_amount") == 0) | (F.col("entitle_to_pos_discount") == 0),
+#             (F.col("total_revenue_agreement") + F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2)).cast("decimal(18,4)")
+#         ).otherwise(
+#             (
+#                 F.col("total_revenue_agreement") -
+#                 F.abs(F.round(F.col("invoice_amount_ratio") * F.col("pos_discount_amount"), 2)) +
+#                 F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2)
+#             ).cast("decimal(18,4)")
+#         ).cast("decimal(28, 4)").alias("total_revenue_agreement"),
+
+#         # Adjusted pos_discount_amount
+#         F.when(
+#             (F.col("pos_discount_amount") == 0) | (F.col("entitle_to_pos_discount") == 0),
+#             0
+#         ).otherwise(
+#             F.round(F.col("invoice_amount_ratio") * F.col("pos_discount_amount"), 2).cast("decimal(18,4)")
+#         ).cast("decimal(18, 4)").alias("pos_discount_amount"),
+
+#         # voided_amount calculation
+#         F.when(
+#             F.col("invoice_reversed_amount") == 0,
+#             0
+#         ).otherwise(
+#             F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2).cast("decimal(18,4)")
+#         ).cast("decimal(18, 4)").alias("voided_amount")
+#     )
+#     # .withColumn(
+#     #     "dim_location_key",
+#     #     F.when(F.col("dim_location_key").isNull(), F.concat(F.col("source"), F.lit("9999")))
+#     #      .otherwise(F.col("dim_location_key"))
+#     # )
+# )
 
 #====== [END] CELL 34 ======
 
@@ -1364,14 +1364,14 @@ fct_agreement_sales = (
 
 #====== [START] CELL 37 ======
 
-silver_invoice_detail = spark.read.table(TABLE('silver_invoice_detail'))
-silver_invoice_header = spark.read.table(TABLE('silver_invoice_header'))
-silver_product = spark.read.table(TABLE('silver_product'))
-silver_product_category = spark.read.table(TABLE('silver_product_category'))
-silver_location = spark.read.table(TABLE('silver_location'))
-dim_location_360f = spark.read.table(TABLE('dim_location_360f'))
+# silver_invoice_detail = spark.read.table(TABLE('silver_invoice_detail'))
+# silver_invoice_header = spark.read.table(TABLE('silver_invoice_header'))
+# silver_product = spark.read.table(TABLE('silver_product'))
+# silver_product_category = spark.read.table(TABLE('silver_product_category'))
+# silver_location = spark.read.table(TABLE('silver_location'))
+# dim_location_360f = spark.read.table(TABLE('dim_location_360f'))
 
-silver_agreement = spark.read.table(TABLE('360_silver_agreement'))
+# silver_agreement = spark.read.table(TABLE('360_silver_agreement'))
 
 # 360_silver_agreement.bk < silver_invoice_detail.source & silver_invoice_detail.item_id
 
@@ -1382,45 +1382,45 @@ silver_agreement = spark.read.table(TABLE('360_silver_agreement'))
 #====== [START] CELL 38 ======
 
 # updated on 2025.08.22. Added
-pos_discount_rounding_df = (
-    silver_invoice_detail.alias("id")
-    .filter(F.col("active") == 1)
-    .filter(F.col("item_type") == "product")
-    .join(
-        silver_invoice_category.alias("ic").filter(F.col("active") == 1).filter(F.col("ic.name").isin(["Others", "Rounding"])),
-        F.concat(F.col("id.source"), F.col("id.invoice_category_id").cast("bigint")) == F.concat(F.col("ic.source"), F.col("ic.id").cast("bigint")),
-        "inner"
-    )
-    .groupBy("id.invoice_header_id", "id.source")
-    .agg(F.sum("id.amount").cast(DecimalType(18, 4)).alias("amount"))
-    .withColumn("invoice_header_bk", F.concat(F.col("source"), F.col("invoice_header_id").cast("bigint")))
-    .filter(F.col("amount") < F.lit(0).cast(DecimalType(18, 4)))
-    .select("invoice_header_bk", "amount")
-)
+# pos_discount_rounding_df = (
+#     silver_invoice_detail.alias("id")
+#     .filter(F.col("active") == 1)
+#     .filter(F.col("item_type") == "product")
+#     .join(
+#         silver_invoice_category.alias("ic").filter(F.col("active") == 1).filter(F.col("ic.name").isin(["Others", "Rounding"])),
+#         F.concat(F.col("id.source"), F.col("id.invoice_category_id").cast("bigint")) == F.concat(F.col("ic.source"), F.col("ic.id").cast("bigint")),
+#         "inner"
+#     )
+#     .groupBy("id.invoice_header_id", "id.source")
+#     .agg(F.sum("id.amount").cast(DecimalType(18, 4)).alias("amount"))
+#     .withColumn("invoice_header_bk", F.concat(F.col("source"), F.col("invoice_header_id").cast("bigint")))
+#     .filter(F.col("amount") < F.lit(0).cast(DecimalType(18, 4)))
+#     .select("invoice_header_bk", "amount")
+# )
 
-raw_invoice_df = (
-    silver_invoice_detail.alias("id")
-    .filter(F.col("active") == 1)
-    .join(
-        silver_invoice_category.alias("ic").filter(~F.col("ic.name").isin(["Others", "Rounding"])),
-        F.concat(F.col("id.source"), F.col("id.invoice_category_id").cast("bigint")) == F.concat(F.col("ic.source"), F.col("ic.id").cast("bigint")),
-        "inner"
-    )
-    .groupBy("id.invoice_header_id", "id.source")
-    .agg(F.sum("id.amount").cast(DecimalType(18, 4)).alias("raw_amount"))
-    .withColumn("invoice_header_bk", F.concat(F.col("source"), F.col("invoice_header_id").cast("bigint")))
-    .select("invoice_header_bk", "raw_amount")
-)
+# raw_invoice_df = (
+#     silver_invoice_detail.alias("id")
+#     .filter(F.col("active") == 1)
+#     .join(
+#         silver_invoice_category.alias("ic").filter(~F.col("ic.name").isin(["Others", "Rounding"])),
+#         F.concat(F.col("id.source"), F.col("id.invoice_category_id").cast("bigint")) == F.concat(F.col("ic.source"), F.col("ic.id").cast("bigint")),
+#         "inner"
+#     )
+#     .groupBy("id.invoice_header_id", "id.source")
+#     .agg(F.sum("id.amount").cast(DecimalType(18, 4)).alias("raw_amount"))
+#     .withColumn("invoice_header_bk", F.concat(F.col("source"), F.col("invoice_header_id").cast("bigint")))
+#     .select("invoice_header_bk", "raw_amount")
+# )
 
-reverse_invoice_df = (
-    silver_invoice_detail
-    .filter(F.col("item_type") == "invoice_header")
-    .filter(F.col("active") == 1)
-    .groupBy("source", "item_id")
-    .agg(F.sum("amount").alias("reverse_amount"))
-    .withColumn("reverse_invoice_header_bk", F.concat(F.col("source"), F.col("item_id").cast("bigint")))
-    .select("reverse_invoice_header_bk", "reverse_amount")
-)
+# reverse_invoice_df = (
+#     silver_invoice_detail
+#     .filter(F.col("item_type") == "invoice_header")
+#     .filter(F.col("active") == 1)
+#     .groupBy("source", "item_id")
+#     .agg(F.sum("amount").alias("reverse_amount"))
+#     .withColumn("reverse_invoice_header_bk", F.concat(F.col("source"), F.col("item_id").cast("bigint")))
+#     .select("reverse_invoice_header_bk", "reverse_amount")
+# )
 
 
 #====== [END] CELL 38 ======
@@ -1428,198 +1428,198 @@ reverse_invoice_df = (
 
 #====== [START] CELL 39 ======
 
-join_product_sales = (
-    silver_invoice_detail.alias("id")
-    .filter(F.col("id.active") == 1)
-    .filter(F.col("id.item_type") == "product")
-    .join(
-        silver_agreement.alias("a"),
-        F.concat(F.col("id.source"), F.col("id.item_id").cast("bigint")) == F.col("a.bk"),
-        "left"
-    )
-    .join(
-        silver_invoice_header.alias("ih"),
-        (F.concat(F.col("id.source"), F.col("id.invoice_header_id")) == F.concat(F.col("ih.source"), F.col("ih.id"))) & 
-        (F.col("ih.active") == 1) &                                # updated on 2025.08.22. Added
-        (F.col("ih.total_amount") >= 0),                            # updated on 2025.08.22. Added
-        "inner"
-    )
-    .join(
-        silver_product.alias("p"),
-        (F.concat(F.col("id.source"), F.col("id.item_id").cast("bigint")) == F.concat(F.col("p.source"), F.col("p.id").cast("bigint"))) & 
-        (F.col("p.active") == 1),                                   # updated on 2025.08.22. Added
-        "inner"
-    )
-    .join(                                                          # updated on 2025.08.22. Added
-        silver_invoice_category.alias("ic"),
-        (F.concat(F.col("ic.source"), F.col("ic.id").cast("bigint")) == F.concat(F.col("id.source"), F.col("id.invoice_category_id").cast("bigint"))) &
-        (F.col("ic.active") == 1) & 
-        ~(F.col("ic.name").isin(["Others", "Rounding"])), 
-        "inner"
-    )
-    .join(
-        silver_product_category.alias("pc"),
-        (F.concat(F.col("p.source"), F.col("p.product_category_id").cast("bigint")) == F.concat(F.col("pc.source"), F.col("pc.id").cast("bigint"))) &
-        (F.col("pc.active") == 1),                                 # updated on 2025.08.22. Added
-        "left"
-    )
-    .join(
-        silver_location.alias("f"),
-        (F.concat(F.col("id.source"), F.col("id.location_id").cast("bigint")) == F.col("f.bk")) &
-        (F.col("f.active") == 1),                                  # updated on 2025.08.22. Added
-        "left"
-    )
-    .join(
-        dim_location_360f.alias("loc_f"),
-        F.col("loc_f.dim_location_360f_key") == F.col("f.bk"),
-        "left"
-    )
+# join_product_sales = (
+#     silver_invoice_detail.alias("id")
+#     .filter(F.col("id.active") == 1)
+#     .filter(F.col("id.item_type") == "product")
+#     .join(
+#         silver_agreement.alias("a"),
+#         F.concat(F.col("id.source"), F.col("id.item_id").cast("bigint")) == F.col("a.bk"),
+#         "left"
+#     )
+#     .join(
+#         silver_invoice_header.alias("ih"),
+#         (F.concat(F.col("id.source"), F.col("id.invoice_header_id")) == F.concat(F.col("ih.source"), F.col("ih.id"))) &
+#         (F.col("ih.active") == 1) &                                # updated on 2025.08.22. Added
+#         (F.col("ih.total_amount") >= 0),                            # updated on 2025.08.22. Added
+#         "inner"
+#     )
+#     .join(
+#         silver_product.alias("p"),
+#         (F.concat(F.col("id.source"), F.col("id.item_id").cast("bigint")) == F.concat(F.col("p.source"), F.col("p.id").cast("bigint"))) &
+#         (F.col("p.active") == 1),                                   # updated on 2025.08.22. Added
+#         "inner"
+#     )
+#     .join(                                                          # updated on 2025.08.22. Added
+#         silver_invoice_category.alias("ic"),
+#         (F.concat(F.col("ic.source"), F.col("ic.id").cast("bigint")) == F.concat(F.col("id.source"), F.col("id.invoice_category_id").cast("bigint"))) &
+#         (F.col("ic.active") == 1) &
+#         ~(F.col("ic.name").isin(["Others", "Rounding"])),
+#         "inner"
+#     )
+#     .join(
+#         silver_product_category.alias("pc"),
+#         (F.concat(F.col("p.source"), F.col("p.product_category_id").cast("bigint")) == F.concat(F.col("pc.source"), F.col("pc.id").cast("bigint"))) &
+#         (F.col("pc.active") == 1),                                 # updated on 2025.08.22. Added
+#         "left"
+#     )
+#     .join(
+#         silver_location.alias("f"),
+#         (F.concat(F.col("id.source"), F.col("id.location_id").cast("bigint")) == F.col("f.bk")) &
+#         (F.col("f.active") == 1),                                  # updated on 2025.08.22. Added
+#         "left"
+#     )
+#     .join(
+#         dim_location_360f.alias("loc_f"),
+#         F.col("loc_f.dim_location_360f_key") == F.col("f.bk"),
+#         "left"
+#     )
 
-    # updated on 2025.08.22. Added
-    .join(
-        pos_discount_rounding_df.alias("pos_dis"),
-        F.col("pos_dis.invoice_header_bk") == F.concat(F.col("id.source"), F.col("id.invoice_header_id").cast("bigint")),
-        "left"
-    )
-    .join(
-        raw_invoice_df.alias("ri"),
-        F.col("ri.invoice_header_bk") == F.concat(F.col("id.source"), F.col("id.invoice_header_id").cast("bigint")),
-        "left"
-    )
-    .join(
-        reverse_invoice_df.alias("reverse_invoice"),
-        F.col("reverse_invoice.reverse_invoice_header_bk") == F.concat(F.col("id.source"), F.col("id.invoice_header_id").cast("bigint")),
-        "left"
-    )
-    # update end 
+#     # updated on 2025.08.22. Added
+#     .join(
+#         pos_discount_rounding_df.alias("pos_dis"),
+#         F.col("pos_dis.invoice_header_bk") == F.concat(F.col("id.source"), F.col("id.invoice_header_id").cast("bigint")),
+#         "left"
+#     )
+#     .join(
+#         raw_invoice_df.alias("ri"),
+#         F.col("ri.invoice_header_bk") == F.concat(F.col("id.source"), F.col("id.invoice_header_id").cast("bigint")),
+#         "left"
+#     )
+#     .join(
+#         reverse_invoice_df.alias("reverse_invoice"),
+#         F.col("reverse_invoice.reverse_invoice_header_bk") == F.concat(F.col("id.source"), F.col("id.invoice_header_id").cast("bigint")),
+#         "left"
+#     )
+#     # update end
 
-    .select(
-        F.col("a.bk").cast("string").alias("fct_agreement_key"),
-        F.concat(F.col("a.source"), F.col("a.contact_id")).cast("string").alias("dim_contact_key"),
+#     .select(
+#         F.col("a.bk").cast("string").alias("fct_agreement_key"),
+#         F.concat(F.col("a.source"), F.col("a.contact_id")).cast("string").alias("dim_contact_key"),
 
-        F.col("p.id").cast("bigint").alias("product_id"),
-        F.col("p.name").cast("string").alias("product_name"),
-        F.col("p.product_category_id").cast("bigint").alias("product_category_id"),
-        F.col("pc.name").cast("string").alias("product_category_name"),
-        F.col("loc_f.dim_location_key").cast("string").alias("dim_location_key"),
-        F.col("id.invoice_category_id").cast("bigint").alias("invoice_category_id"),
-        F.col("id.amount").cast("decimal(18,4)").alias("invoice_detail_amount"),
-        F.col("id.source").cast("string").alias("source"),
-        F.col("ih.post_date").cast("date").alias("post_date"),
+#         F.col("p.id").cast("bigint").alias("product_id"),
+#         F.col("p.name").cast("string").alias("product_name"),
+#         F.col("p.product_category_id").cast("bigint").alias("product_category_id"),
+#         F.col("pc.name").cast("string").alias("product_category_name"),
+#         F.col("loc_f.dim_location_key").cast("string").alias("dim_location_key"),
+#         F.col("id.invoice_category_id").cast("bigint").alias("invoice_category_id"),
+#         F.col("id.amount").cast("decimal(18,4)").alias("invoice_detail_amount"),
+#         F.col("id.source").cast("string").alias("source"),
+#         F.col("ih.post_date").cast("date").alias("post_date"),
 
-        # updated on 2025.08.22. Added
-        F.concat(F.col("id.source"), F.col("id.id").cast("bigint")).cast("string").alias("fct_invoice_detail_key"),
-        F.col("ih.total_amount").cast("decimal(18,4)").alias("invoice_total_amount"),
-        F.col("pos_dis.amount").cast(DecimalType(18, 4)).alias("pos_discount_amount"),
-        F.col("ri.raw_amount").cast(DecimalType(18, 4)).alias("invoice_raw_total_amount"),
+#         # updated on 2025.08.22. Added
+#         F.concat(F.col("id.source"), F.col("id.id").cast("bigint")).cast("string").alias("fct_invoice_detail_key"),
+#         F.col("ih.total_amount").cast("decimal(18,4)").alias("invoice_total_amount"),
+#         F.col("pos_dis.amount").cast(DecimalType(18, 4)).alias("pos_discount_amount"),
+#         F.col("ri.raw_amount").cast(DecimalType(18, 4)).alias("invoice_raw_total_amount"),
 
-        F.when(
-            F.col("ic.name").isin(["Others", "Rounding"]), 
-            0
-        ).when(
-            (F.col("id.source") == "CN") & 
-            (F.col("id.amount") <= F.lit(0).cast(DecimalType(18, 4))), 
-            0
-        ).otherwise(1).cast("int").alias("entitle_to_pos_discount"),
-        
-        F.coalesce(F.col("reverse_invoice.reverse_amount"), F.lit(0)).cast(DecimalType(18, 4)).alias("reversed_amount"),
-        
-        F.col("ih.total_amount").cast(DecimalType(18, 4)).alias("invoice_header_total_amount")
-        # update end 
+#         F.when(
+#             F.col("ic.name").isin(["Others", "Rounding"]),
+#             0
+#         ).when(
+#             (F.col("id.source") == "CN") &
+#             (F.col("id.amount") <= F.lit(0).cast(DecimalType(18, 4))),
+#             0
+#         ).otherwise(1).cast("int").alias("entitle_to_pos_discount"),
 
-    )
-)
+#         F.coalesce(F.col("reverse_invoice.reverse_amount"), F.lit(0)).cast(DecimalType(18, 4)).alias("reversed_amount"),
+
+#         F.col("ih.total_amount").cast(DecimalType(18, 4)).alias("invoice_header_total_amount")
+#         # update end
+
+#     )
+# )
 
 #====== [END] CELL 39 ======
 
 
 #====== [START] CELL 40 ======
 
-fct_product_sales = (
-    join_product_sales.groupBy(
-        "fct_agreement_key",
-        "dim_contact_key",
-        "product_id",
-        "product_name",
-        "product_category_id",
-        "product_category_name",
-        "dim_location_key",
-        "invoice_category_id",
-        "source",
-        "post_date",
-        "fct_invoice_detail_key",               # updated on 2025.08.22. Added
-        "entitle_to_pos_discount",              # updated on 2025.08.22. Added
-    )
-    .agg(
-        F.sum("invoice_detail_amount").cast("decimal(28,4)").alias("total_revenue_product"),
+# fct_product_sales = (
+#     join_product_sales.groupBy(
+#         "fct_agreement_key",
+#         "dim_contact_key",
+#         "product_id",
+#         "product_name",
+#         "product_category_id",
+#         "product_category_name",
+#         "dim_location_key",
+#         "invoice_category_id",
+#         "source",
+#         "post_date",
+#         "fct_invoice_detail_key",               # updated on 2025.08.22. Added
+#         "entitle_to_pos_discount",              # updated on 2025.08.22. Added
+#     )
+#     .agg(
+#         F.sum("invoice_detail_amount").cast("decimal(28,4)").alias("total_revenue_product"),
 
-        # updated on 2025.08.22. Added
-        F.coalesce(F.sum("invoice_raw_total_amount"), F.lit(0)).cast(DecimalType(18, 4)).alias("invoice_raw_total_amount"),
-        F.coalesce(F.sum("reversed_amount"), F.lit(0)).cast(DecimalType(18, 4)).alias("invoice_reversed_amount"),
-        F.coalesce(F.sum("pos_discount_amount"), F.lit(0)).cast(DecimalType(18, 4)).alias("pos_discount_amount"),
-        
-        F.when(
-            (F.sum("invoice_detail_amount") <= 0) | 
-            (F.sum("invoice_raw_total_amount") == 0), 
-            F.lit(0)
-        ).otherwise(
-            (F.sum("invoice_detail_amount") / F.sum("invoice_raw_total_amount")).cast(DecimalType(18, 10))
-        ).cast(DecimalType(38, 10)).alias("invoice_amount_ratio"),
-    )
+#         # updated on 2025.08.22. Added
+#         F.coalesce(F.sum("invoice_raw_total_amount"), F.lit(0)).cast(DecimalType(18, 4)).alias("invoice_raw_total_amount"),
+#         F.coalesce(F.sum("reversed_amount"), F.lit(0)).cast(DecimalType(18, 4)).alias("invoice_reversed_amount"),
+#         F.coalesce(F.sum("pos_discount_amount"), F.lit(0)).cast(DecimalType(18, 4)).alias("pos_discount_amount"),
 
-    # updated on 2025.08.22. Added
-    .select(
-        F.col("fct_agreement_key").cast("string"),
-        F.col("dim_contact_key").cast("string"),
-        F.col("fct_invoice_detail_key").cast("string"),
-        F.col("product_id").cast("bigint"),
-        F.col("product_name").cast("string"),
-        F.col("product_category_id").cast("bigint"),
-        F.col("product_category_name").cast("string"),
-        F.col("dim_location_key").cast("string"),
-        F.col("invoice_category_id").cast("bigint"),
-        F.col("source").cast("string"),
-        F.col("post_date").cast("timestamp"),
-        F.col("total_revenue_product").cast(DecimalType(28, 4)).alias("bk_total_revenue_product"),
-        
-        # Complex CASE for adjusted total_revenue_product
-        F.when(
-            F.col("invoice_amount_ratio") == 0, 
-            F.col("total_revenue_product")
-        ).when(
-            (F.col("pos_discount_amount") == 0) | 
-            (F.col("entitle_to_pos_discount") == 0),
-            (F.col("total_revenue_product") + F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2)).cast(DecimalType(18, 4))
-        ).otherwise(
-            (
-                F.col("total_revenue_product") - 
-                F.abs(F.round(F.col("invoice_amount_ratio") * F.col("pos_discount_amount"), 2)) + 
-                F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2)
-            ).cast(DecimalType(18, 4))
-        ).cast(DecimalType(28, 4)).alias("total_revenue_product"),
-        
-        F.when(
-            (F.col("pos_discount_amount") == 0) | 
-            (F.col("entitle_to_pos_discount") == 0), 
-            0
-        ).otherwise(
-            F.round(F.col("invoice_amount_ratio") * F.col("pos_discount_amount"), 2).cast(DecimalType(18, 4))
-        ).cast(DecimalType(18, 4)).alias("pos_discount_amount"),
-        
-        # voided_amount calculation
-        F.when(
-            F.col("invoice_reversed_amount") == 0, 
-            0
-        ).otherwise(
-            F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2).cast(DecimalType(18, 4))
-        ).cast(DecimalType(18, 4)).alias("voided_amount")
-    )
-    # .withColumn(
-    #     "dim_location_key", 
-    #     F.when(F.col("dim_location_key").isNull(), F.concat(F.col("source"), F.lit("9999")))
-    #      .otherwise(F.col("dim_location_key"))
-    # )
-)
+#         F.when(
+#             (F.sum("invoice_detail_amount") <= 0) |
+#             (F.sum("invoice_raw_total_amount") == 0),
+#             F.lit(0)
+#         ).otherwise(
+#             (F.sum("invoice_detail_amount") / F.sum("invoice_raw_total_amount")).cast(DecimalType(18, 10))
+#         ).cast(DecimalType(38, 10)).alias("invoice_amount_ratio"),
+#     )
+
+#     # updated on 2025.08.22. Added
+#     .select(
+#         F.col("fct_agreement_key").cast("string"),
+#         F.col("dim_contact_key").cast("string"),
+#         F.col("fct_invoice_detail_key").cast("string"),
+#         F.col("product_id").cast("bigint"),
+#         F.col("product_name").cast("string"),
+#         F.col("product_category_id").cast("bigint"),
+#         F.col("product_category_name").cast("string"),
+#         F.col("dim_location_key").cast("string"),
+#         F.col("invoice_category_id").cast("bigint"),
+#         F.col("source").cast("string"),
+#         F.col("post_date").cast("timestamp"),
+#         F.col("total_revenue_product").cast(DecimalType(28, 4)).alias("bk_total_revenue_product"),
+
+#         # Complex CASE for adjusted total_revenue_product
+#         F.when(
+#             F.col("invoice_amount_ratio") == 0,
+#             F.col("total_revenue_product")
+#         ).when(
+#             (F.col("pos_discount_amount") == 0) |
+#             (F.col("entitle_to_pos_discount") == 0),
+#             (F.col("total_revenue_product") + F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2)).cast(DecimalType(18, 4))
+#         ).otherwise(
+#             (
+#                 F.col("total_revenue_product") -
+#                 F.abs(F.round(F.col("invoice_amount_ratio") * F.col("pos_discount_amount"), 2)) +
+#                 F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2)
+#             ).cast(DecimalType(18, 4))
+#         ).cast(DecimalType(28, 4)).alias("total_revenue_product"),
+
+#         F.when(
+#             (F.col("pos_discount_amount") == 0) |
+#             (F.col("entitle_to_pos_discount") == 0),
+#             0
+#         ).otherwise(
+#             F.round(F.col("invoice_amount_ratio") * F.col("pos_discount_amount"), 2).cast(DecimalType(18, 4))
+#         ).cast(DecimalType(18, 4)).alias("pos_discount_amount"),
+
+#         # voided_amount calculation
+#         F.when(
+#             F.col("invoice_reversed_amount") == 0,
+#             0
+#         ).otherwise(
+#             F.round(F.col("invoice_amount_ratio") * F.col("invoice_reversed_amount"), 2).cast(DecimalType(18, 4))
+#         ).cast(DecimalType(18, 4)).alias("voided_amount")
+#     )
+#     # .withColumn(
+#     #     "dim_location_key",
+#     #     F.when(F.col("dim_location_key").isNull(), F.concat(F.col("source"), F.lit("9999")))
+#     #      .otherwise(F.col("dim_location_key"))
+#     # )
+# )
 
 #====== [END] CELL 40 ======
 
@@ -1637,11 +1637,11 @@ fct_product_sales = (
 
 #====== [START] CELL 43 ======
 
-silver_payment_detail = spark.read.table(TABLE('silver_payment_detail'))
-silver_payment_header = spark.read.table(TABLE('silver_payment_header'))
-silver_invoice_header = spark.read.table(TABLE('silver_invoice_header'))
-silver_location = spark.read.table(TABLE('silver_location'))
-dim_location_360f = spark.read.table(TABLE('dim_location_360f'))
+# silver_payment_detail = spark.read.table(TABLE('silver_payment_detail'))
+# silver_payment_header = spark.read.table(TABLE('silver_payment_header'))
+# silver_invoice_header = spark.read.table(TABLE('silver_invoice_header'))
+# silver_location = spark.read.table(TABLE('silver_location'))
+# dim_location_360f = spark.read.table(TABLE('dim_location_360f'))
 
 
 #====== [END] CELL 43 ======
@@ -1649,59 +1649,59 @@ dim_location_360f = spark.read.table(TABLE('dim_location_360f'))
 
 #====== [START] CELL 44 ======
 
-join_outstanding = (
-    silver_payment_detail.alias("pd")
-    .join(
-        silver_payment_header.alias("ph"),
-        F.concat(F.col("pd.source"), F.col("pd.payment_header_id").cast("bigint")) == F.concat(F.col("ph.source"), F.col("ph.id").cast("bigint")),
-    )
-    .join(
-        silver_invoice_header.alias("ih"),
-        F.concat(F.col("pd.source"), F.col("pd.invoice_header_id").cast("bigint")) == F.concat(F.col("ih.source"), F.col("ih.id").cast("bigint")),
-    )
-    .join(
-        silver_location.alias("f"),
-        F.concat(F.col("ph.source"), F.col("ph.location_id").cast("bigint")) == F.col("f.bk"),
-        "left"
-    )
-    .join(
-        dim_location_360f.alias("loc_f"),
-        F.col("loc_f.dim_location_360f_key") == F.col("f.bk"),
-        "left"
-    )
-    .filter(F.col("pd.payment_category_id") == 6)
-    .select(
-        F.col("pd.bk").alias("bk"),
-        F.col("pd.source").cast("string").alias("source"),
-        # F.concat(F.col("pd.source"), F.col("pd.payment_header_id").cast("bigint")).alias("fct_payment_detail_key"),
-        # F.concat(F.col("pd.source"), F.col("pd.invoice_header_id").cast("bigint")).alias("fct_invoice_detail_key"),
-        F.col("ph.post_date").cast("timestamp").alias("post_date"),
-        F.col("pd.amount").cast("decimal(18,4)").alias("amount"),
-        F.col("loc_f.dim_location_key").cast("string").alias("dim_location_key"),
-        F.col("ph.location_id").cast("bigint").alias("location_id"),
-    )
-    # .withColumn(
-    #     "dim_location_key", 
-    #     F.when(F.col("dim_location_key").isNull(), F.concat(F.col("source"), F.lit("9999")))
-    #      .otherwise(F.col("dim_location_key"))
-    # )
-)
+# join_outstanding = (
+#     silver_payment_detail.alias("pd")
+#     .join(
+#         silver_payment_header.alias("ph"),
+#         F.concat(F.col("pd.source"), F.col("pd.payment_header_id").cast("bigint")) == F.concat(F.col("ph.source"), F.col("ph.id").cast("bigint")),
+#     )
+#     .join(
+#         silver_invoice_header.alias("ih"),
+#         F.concat(F.col("pd.source"), F.col("pd.invoice_header_id").cast("bigint")) == F.concat(F.col("ih.source"), F.col("ih.id").cast("bigint")),
+#     )
+#     .join(
+#         silver_location.alias("f"),
+#         F.concat(F.col("ph.source"), F.col("ph.location_id").cast("bigint")) == F.col("f.bk"),
+#         "left"
+#     )
+#     .join(
+#         dim_location_360f.alias("loc_f"),
+#         F.col("loc_f.dim_location_360f_key") == F.col("f.bk"),
+#         "left"
+#     )
+#     .filter(F.col("pd.payment_category_id") == 6)
+#     .select(
+#         F.col("pd.bk").alias("bk"),
+#         F.col("pd.source").cast("string").alias("source"),
+#         # F.concat(F.col("pd.source"), F.col("pd.payment_header_id").cast("bigint")).alias("fct_payment_detail_key"),
+#         # F.concat(F.col("pd.source"), F.col("pd.invoice_header_id").cast("bigint")).alias("fct_invoice_detail_key"),
+#         F.col("ph.post_date").cast("timestamp").alias("post_date"),
+#         F.col("pd.amount").cast("decimal(18,4)").alias("amount"),
+#         F.col("loc_f.dim_location_key").cast("string").alias("dim_location_key"),
+#         F.col("ph.location_id").cast("bigint").alias("location_id"),
+#     )
+#     # .withColumn(
+#     #     "dim_location_key",
+#     #     F.when(F.col("dim_location_key").isNull(), F.concat(F.col("source"), F.lit("9999")))
+#     #      .otherwise(F.col("dim_location_key"))
+#     # )
+# )
 
 #====== [END] CELL 44 ======
 
 
 #====== [START] CELL 45 ======
 
-fct_outstanding = join_outstanding.groupBy(
-                        "source",
-                        # "fct_payment_detail_key",
-                        # "fct_invoice_detail_key",
-                        "amount",
-                        "post_date",
-                        "dim_location_key",
-                    ).agg(
-                        F.sum("amount").cast("decimal(28,4)").alias("total_amount")
-                    )
+# fct_outstanding = join_outstanding.groupBy(
+#                         "source",
+#                         # "fct_payment_detail_key",
+#                         # "fct_invoice_detail_key",
+#                         "amount",
+#                         "post_date",
+#                         "dim_location_key",
+#                     ).agg(
+#                         F.sum("amount").cast("decimal(28,4)").alias("total_amount")
+#                     )
 # fct_outstanding.display()
 
 #====== [END] CELL 45 ======
@@ -1721,12 +1721,12 @@ fct_outstanding = join_outstanding.groupBy(
 
 #====== [START] CELL 48 ======
 
-fct_agreement.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(LEG_TABLE('fct_360_agreement'))
+# fct_agreement.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(LEG_TABLE('fct_360_agreement'))
 
-fct_membership_sales.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(LEG_TABLE('fct_fpa_revenue_membership_sales'))
-fct_agreement_sales.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(LEG_TABLE('fct_fpa_revenue_agreement_sales'))
-fct_product_sales.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(LEG_TABLE('fct_fpa_revenue_product_sales'))
-fct_outstanding.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(LEG_TABLE('fct_fpa_outstanding'))
+# fct_membership_sales.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(LEG_TABLE('fct_fpa_revenue_membership_sales'))
+# fct_agreement_sales.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(LEG_TABLE('fct_fpa_revenue_agreement_sales'))
+# fct_product_sales.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(LEG_TABLE('fct_fpa_revenue_product_sales'))
+# fct_outstanding.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(LEG_TABLE('fct_fpa_outstanding'))
 
 
 #====== [END] CELL 48 ======
@@ -1738,10 +1738,10 @@ fct_outstanding.write.mode("overwrite").option("overwriteSchema", "true").saveAs
 
 #====== [START] CELL 50 ======
 
-membership_sales = spark.read.table(LEG_TABLE('fct_fpa_revenue_membership_sales'))
-agreement_sales = spark.read.table(LEG_TABLE('fct_fpa_revenue_agreement_sales'))
-product_sales = spark.read.table(LEG_TABLE('fct_fpa_revenue_product_sales'))
-outstanding = spark.read.table(LEG_TABLE('fct_fpa_outstanding'))
+# membership_sales = spark.read.table(LEG_TABLE('fct_fpa_revenue_membership_sales'))
+# agreement_sales = spark.read.table(LEG_TABLE('fct_fpa_revenue_agreement_sales'))
+# product_sales = spark.read.table(LEG_TABLE('fct_fpa_revenue_product_sales'))
+# outstanding = spark.read.table(LEG_TABLE('fct_fpa_outstanding'))
 
 rate = spark.read.table(LEG_TABLE('rpt_exchange_rate'))
 
@@ -3347,7 +3347,7 @@ fct_total_revenue.write.mode("overwrite").option("overwriteSchema", "true").save
 
 #====== [START] CELL 94 ======
 
-fct_total_revenue.groupBy('nmu_ind').count().display()
+# fct_total_revenue.groupBy('nmu_ind').count().display()
 
 #====== [END] CELL 94 ======
 
@@ -3378,19 +3378,19 @@ silver_user = spark.read.table(TABLE('silver_users')).select(
 
 #====== [START] CELL 98 ======
 
-duplicate_source_id = (
-    silver_contact
-    .groupBy("source", "id")
-    .count()
-    .filter(F.col("count") > 1)
-)
+# duplicate_source_id = (
+#     silver_contact
+#     .groupBy("source", "id")
+#     .count()
+#     .filter(F.col("count") > 1)
+# )
 
-duplicate_lead_id = (
-    silver_leads
-    .groupBy("region", "ref_id")
-    .count()
-    .filter(F.col("count") > 1)
-)
+# duplicate_lead_id = (
+#     silver_leads
+#     .groupBy("region", "ref_id")
+#     .count()
+#     .filter(F.col("count") > 1)
+# )
 
 # display(duplicate_source_id)
 
@@ -3401,10 +3401,10 @@ duplicate_lead_id = (
 
 #====== [START] CELL 99 ======
 
-filtered_silver_leads = silver_leads.filter(
-    (F.col("region") == "HK") & 
-    (F.col("ref_id") == "54c8b99d-2625-43ea-8b39-d52d8522198f")
-)
+# filtered_silver_leads = silver_leads.filter(
+#     (F.col("region") == "HK") &
+#     (F.col("ref_id") == "54c8b99d-2625-43ea-8b39-d52d8522198f")
+# )
 
 # # display(filtered_silver_leads)
 
